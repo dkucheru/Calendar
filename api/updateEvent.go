@@ -37,11 +37,11 @@ func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//add event to memory
-	err = rest.service.Events.UpdateEvent(id, &event)
+	updatedEvent, err := rest.service.Events.UpdateEvent(id, &event)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	rest.sendData(w, "An event was updated")
+	rest.sendData(w, updatedEvent)
 }

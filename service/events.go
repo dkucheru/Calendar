@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -20,34 +20,16 @@ func newEventsService(repository []*structs.Event) *eventService {
 	return &s
 }
 
-//return (int,error) mb event
-func (s *eventService) AddEvent(newEvent *structs.Event) error {
-	//check if event has mandatory field "Name" filled
-	if newEvent.Name == "" {
-		return &structs.MandatoryFieldError{FieldName: "name"}
-	}
-	if newEvent.Start == (time.Time{}) {
-		return &structs.MandatoryFieldError{FieldName: "start"}
-	}
-	if newEvent.End == (time.Time{}) {
-		return &structs.MandatoryFieldError{FieldName: "end"}
+func (s *eventService) AddEvent(newEvent *structs.Event) (*structs.Event, error) {
+	approved, err := s.checkData(newEvent)
+	if !approved {
+		return nil, err
 	}
 
-	if newEvent.Start.Unix() > newEvent.End.Unix() {
-		return errors.New("End of the event is ahead of the start")
-	}
-
-	//getNext function
-	newEvent.Id = structs.GlobalId
-	structs.GlobalId++
-
-	// Add new Event to our calendar
+	newEvent.Id = s.incrementId()
 	s.repository = append(s.repository, newEvent)
 
-	//debuging
-	fmt.Println(newEvent)
-
-	return nil
+	return newEvent, nil
 }
 
 func (s *eventService) DeleteEvent(id int) error {
@@ -57,19 +39,13 @@ func (s *eventService) DeleteEvent(id int) error {
 			return nil
 		}
 	}
-	return errors.New("No event with such name and start date was found")
+	return errors.New("No event with such id was found")
 }
 
-func (s *eventService) UpdateEvent(id int, newEvent *structs.Event) error {
-	//check if event has mandatory field "Name" filled
-	if newEvent.Name == "" {
-		return &structs.MandatoryFieldError{FieldName: "name"}
-	}
-	if newEvent.Start == (time.Time{}) {
-		return &structs.MandatoryFieldError{FieldName: "start"}
-	}
-	if newEvent.End == (time.Time{}) {
-		return &structs.MandatoryFieldError{FieldName: "end"}
+func (s *eventService) UpdateEvent(id int, newEvent *structs.Event) (updated *structs.Event, err error) {
+	approved, err := s.checkData(newEvent)
+	if !approved {
+		return nil, err
 	}
 
 	for _, event := range s.repository {
@@ -79,25 +55,18 @@ func (s *eventService) UpdateEvent(id int, newEvent *structs.Event) error {
 			event.End = newEvent.End
 			event.Alert = newEvent.Alert
 			event.Description = newEvent.Description
-			return nil
+			return event, nil
 		}
 	}
-	return errors.New("No event with such id")
+	return nil, errors.New("No event with such id")
 }
-
-func (s *eventService) GetAll() (error, []structs.Event) { //remove
-	var result []structs.Event
-	for _, event := range s.repository {
-		result = append(result, *event)
-	}
-	return nil, result
-}
-
-//add separate method for sorting
 
 func (s *eventService) GetEventsOfTheDay(p *structs.EventParams) ([]structs.Event, error) {
 	var result []structs.Event
 
+	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
+		return nil, errors.New("Bad date parameters")
+	}
 	for _, event := range s.repository {
 		_, weekI := event.Start.ISOWeek()
 
@@ -112,6 +81,35 @@ func (s *eventService) GetEventsOfTheDay(p *structs.EventParams) ([]structs.Even
 		}
 	}
 
-	return result, nil
+	if p.Sorting {
+		return *s.sortResults(&result), nil
+	}
 
+	return result, nil
+}
+
+func (s *eventService) sortResults(events *[]structs.Event) *[]structs.Event {
+	sort.Sort(ByStartTime(*events))
+	return events
+}
+
+func (s *eventService) incrementId() int {
+	structs.GlobalId++
+	return structs.GlobalId - 1
+}
+
+func (s *eventService) checkData(newEvent *structs.Event) (bool, error) {
+	if newEvent.Name == "" {
+		return false, &structs.MandatoryFieldError{FieldName: "name"}
+	}
+	if newEvent.Start == (time.Time{}) {
+		return false, &structs.MandatoryFieldError{FieldName: "start"}
+	}
+	if newEvent.End == (time.Time{}) {
+		return false, &structs.MandatoryFieldError{FieldName: "end"}
+	}
+	if newEvent.Start.Unix() > newEvent.End.Unix() {
+		return false, errors.New("End of the event is ahead of the start")
+	}
+	return true, nil
 }

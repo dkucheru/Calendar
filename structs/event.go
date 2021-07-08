@@ -15,13 +15,14 @@ type Event struct {
 }
 
 type EventParams struct {
-	Day   int
-	Week  int
-	Month int
-	Year  int
-	Name  string
-	Start time.Time
-	End   time.Time
+	Day     int
+	Week    int
+	Month   int
+	Year    int
+	Name    string
+	Start   time.Time
+	End     time.Time
+	Sorting bool
 }
 
 var GlobalId int
