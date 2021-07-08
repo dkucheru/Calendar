@@ -1,6 +1,9 @@
 package structs
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Event struct {
 	Id          int       `json:"id"`
@@ -11,4 +14,22 @@ type Event struct {
 	Alert       time.Time `json:"alert"`
 }
 
+type EventParams struct {
+	Day   int
+	Week  int
+	Month int
+	Year  int
+	Name  string
+	Start time.Time
+	End   time.Time
+}
+
 var GlobalId int
+
+type MandatoryFieldError struct {
+	FieldName string
+}
+
+func (e *MandatoryFieldError) Error() string {
+	return fmt.Sprintf("Mandatory field *%v* is not filled. Please, add a %v to the event", e.FieldName, e.FieldName)
+}

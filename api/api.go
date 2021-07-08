@@ -25,13 +25,10 @@ func New(address string, service *service.Service) *Rest {
 
 	api := mux.NewRouter()
 
-	api.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("run/statics"))))
-
-	api.HandleFunc("/test", rest.showSomething).Methods("GET")
-	api.HandleFunc("/addEvent", rest.addEvent).Methods("POST")
-	api.HandleFunc("/delete/{name}/{date}", rest.deleteEvent).Methods("DELETE")
-	api.HandleFunc("/updateEvent/{id}", rest.updateEvent).Methods("PUT")
-	api.HandleFunc("/all", rest.allEvents).Methods("GET")
+	api.HandleFunc("/events", rest.addEvent).Methods("POST")
+	api.HandleFunc("/events", rest.deleteEvent).Methods("DELETE")
+	api.HandleFunc("/events", rest.updateEvent).Methods("PUT")
+	api.HandleFunc("/events", rest.allEvents).Methods("GET")
 	rest.mux = api
 
 	return rest
@@ -67,10 +64,12 @@ type Response struct {
 	Data   interface{}
 }
 
-func (rest *Rest) sendError(w http.ResponseWriter, err error) {
+func (rest *Rest) sendError(w http.ResponseWriter, statusCode int, err error) {
+	w.WriteHeader(statusCode)
+
 	bytes, err := json.Marshal(Response{
-		Status: 2,
-		Data:   err,
+		Status: statusCode,
+		Data:   err.Error(),
 	})
 
 	if err != nil {

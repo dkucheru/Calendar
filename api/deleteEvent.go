@@ -1,37 +1,28 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
-	"time"
-
-	"github.com/gorilla/mux"
+	"strconv"
 )
 
 func (rest *Rest) deleteEvent(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	name := params["name"]
-	start := params["date"]
+	var id int
+	var err error
 
-	var startTime time.Time
-	err := json.Unmarshal([]byte(start), &startTime)
+	query := r.URL.Query()
+	receivedId := query.Get("id")
+
+	id, err = strconv.Atoi(receivedId)
 	if err != nil {
-		w.WriteHeader(http.StatusExpectationFailed)
-		w.Write([]byte("Invalid Date Format"))
+		rest.sendError(w, http.StatusExpectationFailed, err)
 		return
 	}
 
-	// fmt.Println(name)
-	// fmt.Println(startTime)
-
-	err = rest.service.Events.DeleteEvent(&name, &startTime)
+	err = rest.service.Events.DeleteEvent(id)
 	if err != nil {
-		w.WriteHeader(http.StatusExpectationFailed)
-		w.Write([]byte(err.Error()))
+		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	// return after writing Body
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Deleted Event"))
+	rest.sendData(w, "Deleted Event")
 }

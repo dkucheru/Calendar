@@ -16,6 +16,6 @@ func NewService(conf *Config) *Service {
 		repository: conf.Repository,
 	}
 
-	service.Events = newEventsService(service, service.repository)
+	service.Events = newEventsService(service.repository)
 	return service
 }
