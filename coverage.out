@@ -1,4 +1,8 @@
 mode: set
+github.com/dkucheru/Calendar/service/service.go:14.40,21.2 3 0
+github.com/dkucheru/Calendar/service/sort.go:9.42,9.59 1 1
+github.com/dkucheru/Calendar/service/sort.go:10.42,10.90 1 0
+github.com/dkucheru/Calendar/service/sort.go:11.42,11.69 1 0
 github.com/dkucheru/Calendar/service/events.go:16.66,21.2 2 1
 github.com/dkucheru/Calendar/service/events.go:23.82,25.15 2 1
 github.com/dkucheru/Calendar/service/events.go:29.2,32.22 3 1
@@ -32,7 +36,3 @@ github.com/dkucheru/Calendar/service/events.go:102.25,104.3 1 1
 github.com/dkucheru/Calendar/service/events.go:105.37,107.3 1 1
 github.com/dkucheru/Calendar/service/events.go:108.35,110.3 1 1
 github.com/dkucheru/Calendar/service/events.go:111.49,113.3 1 1
-github.com/dkucheru/Calendar/service/service.go:14.40,21.2 3 0
-github.com/dkucheru/Calendar/service/sort.go:9.42,9.59 1 1
-github.com/dkucheru/Calendar/service/sort.go:10.42,10.90 1 0
-github.com/dkucheru/Calendar/service/sort.go:11.42,11.69 1 0
