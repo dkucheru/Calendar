@@ -5,13 +5,16 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"time"
 
 	"github.com/dkucheru/Calendar/sorting"
 	"github.com/dkucheru/Calendar/structs"
 )
 
 func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
+
+	var events []structs.Event
+	var err error
+	var params structs.EventParams
 
 	query := r.URL.Query()
 	receivedDay := query.Get("day")
@@ -20,21 +23,9 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	receivedYear := query.Get("year")
 	receivedSorting := query.Get("sorting")
 
-	receivedName := query.Get("name")
+	params.Name = query.Get("name")
 	receivedStart := query.Get("start")
 	receivedEnd := query.Get("end")
-
-	var events []structs.Event
-	var err error
-	var startTime, endTime time.Time
-	var day, month, year, week int
-	var params structs.EventParams
-	// startTime := (time.Time{})
-	// endTime := (time.Time{})
-	// day := 0
-	// month := 0
-	// year := 0
-	// week := 0
 
 	if receivedStart != "" {
 		err = json.Unmarshal([]byte(receivedStart), &params.Start)
