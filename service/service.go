@@ -1,13 +1,17 @@
 package service
 
-import "github.com/dkucheru/Calendar/structs"
+import (
+	"github.com/dkucheru/Calendar/db"
+)
 
 type Config struct {
-	Repository []*structs.Event
+	// Repository []*structs.Event
+	Repository db.Repository
 }
 
 type Service struct {
-	repository []*structs.Event
+	// repository []*structs.Event
+	repository db.Repository
 	Events     *eventService
 }
 

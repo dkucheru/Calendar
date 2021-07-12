@@ -6,10 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dkucheru/Calendar/db"
 	"github.com/dkucheru/Calendar/structs"
 )
 
-var testRepo []*structs.Event
+// var testRepo []*structs.Event
+var testRepo, _ = db.NewDBRepository()
 var testService = newEventsService(testRepo)
 
 type addEventTest struct {

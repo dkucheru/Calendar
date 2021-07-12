@@ -2,22 +2,26 @@ package app
 
 import (
 	"github.com/dkucheru/Calendar/api"
+	"github.com/dkucheru/Calendar/db"
 	"github.com/dkucheru/Calendar/service"
-	"github.com/dkucheru/Calendar/structs"
 )
 
 type App struct {
-	Repository []*structs.Event
+	// Repository []*structs.Event
+	Repository db.Repository
 	Service    *service.Service
 	Api        *api.Rest
 }
 
 func New() (*App, error) {
-	// var err error
+	var err error
 	app := &App{}
 
-	var events []*structs.Event
-	app.Repository = events
+	// var events []*structs.Event
+	app.Repository, err = db.NewDBRepository()
+	if err != nil {
+		return nil, err
+	}
 
 	app.Service = service.NewService(&service.Config{Repository: app.Repository})
 

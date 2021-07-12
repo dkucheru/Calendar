@@ -6,14 +6,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dkucheru/Calendar/db"
 	"github.com/dkucheru/Calendar/structs"
 )
 
 type eventService struct {
-	repository []*structs.Event
+	repository db.Repository
 }
 
-func newEventsService(repository []*structs.Event) *eventService {
+func newEventsService(repository db.Repository) *eventService {
 	s := eventService{
 		repository: repository,
 	}
@@ -27,15 +28,17 @@ func (s *eventService) AddEvent(newEvent *structs.Event) (*structs.Event, error)
 	}
 
 	newEvent.Id = s.incrementId()
-	s.repository = append(s.repository, newEvent)
+	// s.repository = append(s.repository, newEvent)
+	s.repository.AddToArray(newEvent)
 
 	return newEvent, nil
 }
 
 func (s *eventService) DeleteEvent(id int) error {
-	for i, event := range s.repository {
+	for i, event := range s.repository.Array() {
 		if event.Id == id {
-			s.repository = append(s.repository[:i], s.repository[i+1:]...)
+			// s.repository = append(s.repository[:i], s.repository[i+1:]...)
+			s.repository.RemoveFromArray(i)
 			return nil
 		}
 	}
@@ -48,7 +51,7 @@ func (s *eventService) UpdateEvent(id int, newEvent *structs.Event) (updated *st
 		return nil, err
 	}
 
-	for _, event := range s.repository {
+	for _, event := range s.repository.Array() {
 		if event.Id == id {
 			event.Name = newEvent.Name
 			event.Start = newEvent.Start
@@ -67,7 +70,7 @@ func (s *eventService) GetEventsOfTheDay(p *structs.EventParams) ([]structs.Even
 	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
 		return nil, errors.New("Bad date parameters")
 	}
-	for _, event := range s.repository {
+	for _, event := range s.repository.Array() {
 		_, weekI := event.Start.ISOWeek()
 
 		if (event.Start.Day() == p.Day || p.Day == 0) &&
