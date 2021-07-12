@@ -11,79 +11,13 @@ import (
 )
 
 // var testRepo []*structs.Event
+// FIXME: Move initialization to separate test cases.
 var testRepo, _ = db.NewDBRepository()
 var testService = newEventsService(testRepo)
 
 type addEventTest struct {
 	arg1      *structs.Event
 	errorText string
-}
-
-var addEventTests = []addEventTest{
-	{
-		&structs.Event{
-			Name:        "Ok Test Event",
-			Description: "an ok event for testing",
-			Start:       time.Now(),
-			End:         time.Now().Add(time.Hour),
-			Alert:       time.Now(),
-		},
-		"",
-	},
-	{
-		&structs.Event{
-			Name:  "No description Test Event",
-			Start: time.Now(),
-			End:   time.Now().Add(time.Hour),
-			Alert: time.Now(),
-		},
-		"",
-	},
-	{
-		&structs.Event{
-			Name:  "Only mandatory fields filled Test Event",
-			Start: time.Now(),
-			End:   time.Now().Add(time.Hour),
-		},
-		"",
-	},
-	{
-		&structs.Event{
-			Description: "name field not filled event for testing",
-			Start:       time.Now(),
-			End:         time.Now().Add(time.Hour),
-			Alert:       time.Now(),
-		},
-		(&structs.MandatoryFieldError{FieldName: "name"}).Error(),
-	},
-	{
-		&structs.Event{
-			Name:        "No start time Event",
-			Description: "No start time event for testing",
-			End:         time.Now().Add(time.Hour),
-			Alert:       time.Now(),
-		},
-		(&structs.MandatoryFieldError{FieldName: "start"}).Error(),
-	},
-	{
-		&structs.Event{
-			Name:        "No End time Event",
-			Description: "No end time event for testing",
-			Start:       time.Now(),
-			Alert:       time.Now(),
-		},
-		(&structs.MandatoryFieldError{FieldName: "end"}).Error(),
-	},
-	{
-		&structs.Event{
-			Name:        "Wrong duration of an Event",
-			Description: "wrong duration event for testing",
-			Start:       time.Now().Add(time.Hour),
-			End:         time.Now(),
-			Alert:       time.Now(),
-		},
-		"End of the event is ahead of the start",
-	},
 }
 
 type updateEventTest struct {
@@ -205,7 +139,83 @@ var deleteEventTests = []deleteEventTest{
 }
 
 func TestAdd(t *testing.T) {
+	// testCases := map[string]struct {
+	// 	event  structs.Event
+	// 	result structs.Event
+	// }{
+	// 	"": {},
+	// }
+
+	var addEventTests = []addEventTest{
+		{
+			&structs.Event{
+				Name:        "Ok Test Event",
+				Description: "an ok event for testing",
+				Start:       time.Now(),
+				End:         time.Now().Add(time.Hour),
+				Alert:       time.Now(),
+			},
+			"",
+		},
+		{
+			&structs.Event{
+				Name:  "No description Test Event",
+				Start: time.Now(),
+				End:   time.Now().Add(time.Hour),
+				Alert: time.Now(),
+			},
+			"",
+		},
+		{
+			&structs.Event{
+				Name:  "Only mandatory fields filled Test Event",
+				Start: time.Now(),
+				End:   time.Now().Add(time.Hour),
+			},
+			"",
+		},
+		{
+			&structs.Event{
+				Description: "name field not filled event for testing",
+				Start:       time.Now(),
+				End:         time.Now().Add(time.Hour),
+				Alert:       time.Now(),
+			},
+			(&structs.MandatoryFieldError{FieldName: "name"}).Error(),
+		},
+		{
+			&structs.Event{
+				Name:        "No start time Event",
+				Description: "No start time event for testing",
+				End:         time.Now().Add(time.Hour),
+				Alert:       time.Now(),
+			},
+			(&structs.MandatoryFieldError{FieldName: "start"}).Error(),
+		},
+		{
+			&structs.Event{
+				Name:        "No End time Event",
+				Description: "No end time event for testing",
+				Start:       time.Now(),
+				Alert:       time.Now(),
+			},
+			(&structs.MandatoryFieldError{FieldName: "end"}).Error(),
+		},
+		{
+			&structs.Event{
+				Name:        "Wrong duration of an Event",
+				Description: "wrong duration event for testing",
+				Start:       time.Now().Add(time.Hour),
+				End:         time.Now(),
+				Alert:       time.Now(),
+			},
+			"End of the event is ahead of the start",
+		},
+	}
+
+	// FIXME: Use t.Run() and add names for test cases.
 	for _, test := range addEventTests {
+		// FIXME: Check the result
 		if _, output := testService.AddEvent(test.arg1); !ErrorContains(output, test.errorText) {
 			t.Errorf("got %q, wanted %q", output, test.errorText)
 		}
@@ -213,6 +223,7 @@ func TestAdd(t *testing.T) {
 }
 func TestUpdateEvent(t *testing.T) {
 	for _, test := range updateEventTests {
+		// FIXME: Check the result, check that event was indeed updated.
 		if _, output := testService.UpdateEvent(test.arg1, test.arg2); !ErrorContains(output, test.errorText) {
 			t.Errorf("got %q, wanted %q", output, test.errorText)
 		}
@@ -221,6 +232,7 @@ func TestUpdateEvent(t *testing.T) {
 
 func TestGetEvent(t *testing.T) {
 	for _, test := range getEventTests {
+		// FIXME: Check the result
 		if _, output := testService.GetEventsOfTheDay(test.arg1); !ErrorContains(output, test.errorText) {
 			t.Errorf("got %q, wanted %q", output, test.errorText)
 		}
@@ -229,6 +241,7 @@ func TestGetEvent(t *testing.T) {
 
 func TestDeleteEvent(t *testing.T) {
 	for _, test := range deleteEventTests {
+		// FIXME: Check that event was indeed deleted.
 		if output := testService.DeleteEvent(test.arg1); !ErrorContains(output, test.errorText) {
 			t.Errorf("got %q, wanted %q", output, test.errorText)
 		}

@@ -26,6 +26,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	receivedStart := query.Get("start")
 	receivedEnd := query.Get("end")
 
+	// FIXME: Can we reduce the code duplication?
 	if receivedDay != "" {
 		params.Day, err = strconv.Atoi(receivedDay)
 		if err != nil {

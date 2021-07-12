@@ -21,12 +21,14 @@ func newEventsService(repository db.Repository) *eventService {
 	return &s
 }
 
+// FIXME: Do we really need to pass the struct via pointer?
 func (s *eventService) AddEvent(newEvent *structs.Event) (*structs.Event, error) {
 	approved, err := s.checkData(newEvent)
 	if !approved {
 		return nil, err
 	}
 
+	// FIXME: Move ID generation to repository. It will be easier to switch to DB implementation of repository in the future.
 	newEvent.Id = s.incrementId()
 	// s.repository = append(s.repository, newEvent)
 	s.repository.AddToArray(newEvent)
@@ -35,6 +37,7 @@ func (s *eventService) AddEvent(newEvent *structs.Event) (*structs.Event, error)
 }
 
 func (s *eventService) DeleteEvent(id int) error {
+	// FIXME: How will it be implemented in case repository is based on map.
 	for i, event := range s.repository.Array() {
 		if event.Id == id {
 			// s.repository = append(s.repository[:i], s.repository[i+1:]...)
@@ -42,6 +45,7 @@ func (s *eventService) DeleteEvent(id int) error {
 			return nil
 		}
 	}
+	// FIXME: error strings should not be capitalized
 	return errors.New("No event with such id was found")
 }
 
@@ -61,6 +65,7 @@ func (s *eventService) UpdateEvent(id int, newEvent *structs.Event) (updated *st
 			return event, nil
 		}
 	}
+	// FIXME: error strings should not be capitalized
 	return nil, errors.New("No event with such id")
 }
 
@@ -68,11 +73,13 @@ func (s *eventService) GetEventsOfTheDay(p *structs.EventParams) ([]structs.Even
 	var result []structs.Event
 
 	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
+		// FIXME: error strings should not be capitalized
 		return nil, errors.New("Bad date parameters")
 	}
 	for _, event := range s.repository.Array() {
 		_, weekI := event.Start.ISOWeek()
-
+		
+		// FIXME: Think about how to make it more readable and move to repository
 		if (event.Start.Day() == p.Day || p.Day == 0) &&
 			(p.Month == 0 || event.Start.Month() == time.Month(p.Month)) &&
 			(p.Year == 0 || event.Start.Year() == p.Year) &&
@@ -96,6 +103,7 @@ func (s *eventService) sortResults(events *[]structs.Event) *[]structs.Event {
 	return events
 }
 
+// FIXME: Move to repository
 func (s *eventService) incrementId() int {
 	structs.GlobalId++
 	return structs.GlobalId - 1
@@ -112,6 +120,7 @@ func (s *eventService) checkData(newEvent *structs.Event) (bool, error) {
 		return false, &structs.MandatoryFieldError{FieldName: "end"}
 	}
 	if newEvent.Start.Unix() > newEvent.End.Unix() {
+		// FIXME: error strings should not be capitalized
 		return false, errors.New("End of the event is ahead of the start")
 	}
 	return true, nil
