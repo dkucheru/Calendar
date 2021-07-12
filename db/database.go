@@ -2,6 +2,7 @@ package db
 
 import "github.com/dkucheru/Calendar/structs"
 
+// FIXME: Rename 
 type DatabaseRepository struct {
 	DBrepository []*structs.Event
 }
