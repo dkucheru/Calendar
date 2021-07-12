@@ -26,8 +26,8 @@ func New(address string, service *service.Service) *Rest {
 	api := mux.NewRouter()
 
 	api.HandleFunc("/events", rest.addEvent).Methods("POST")
-	api.HandleFunc("/events", rest.deleteEvent).Methods("DELETE")
-	api.HandleFunc("/events", rest.updateEvent).Methods("PUT")
+	api.HandleFunc("/events/{id}", rest.deleteEvent).Methods("DELETE")
+	api.HandleFunc("/events/{id}", rest.updateEvent).Methods("PUT")
 	api.HandleFunc("/events", rest.allEvents).Methods("GET")
 	rest.mux = api
 

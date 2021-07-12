@@ -1,20 +1,24 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 func (rest *Rest) deleteEvent(w http.ResponseWriter, r *http.Request) {
 	var id int
 	var err error
 
-	query := r.URL.Query()
-	receivedId := query.Get("id")
+	mux := mux.Vars(r)
+	// query := r.URL.Query()
+	receivedId := mux["id"]
 
 	id, err = strconv.Atoi(receivedId)
 	if err != nil {
-		rest.sendError(w, http.StatusExpectationFailed, err)
+		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
 

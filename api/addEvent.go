@@ -15,7 +15,7 @@ func (rest *Rest) addEvent(w http.ResponseWriter, r *http.Request) {
 
 	// If no body is associated return with StatusBadRequest
 	if err != nil {
-		rest.sendError(w, http.StatusBadRequest, err)
+		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
 

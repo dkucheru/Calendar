@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -28,7 +29,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	if receivedDay != "" {
 		params.Day, err = strconv.Atoi(receivedDay)
 		if err != nil {
-			rest.sendError(w, http.StatusBadRequest, err)
+			rest.sendError(w, http.StatusBadRequest, errors.New("Not valid data input"))
 			return
 		}
 	}
@@ -36,7 +37,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	if receivedWeek != "" {
 		params.Week, err = strconv.Atoi(receivedWeek)
 		if err != nil {
-			rest.sendError(w, http.StatusBadRequest, err)
+			rest.sendError(w, http.StatusBadRequest, errors.New("Not valid data input"))
 			return
 		}
 	}
@@ -44,7 +45,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	if receivedMonth != "" {
 		params.Month, err = strconv.Atoi(receivedMonth)
 		if err != nil {
-			rest.sendError(w, http.StatusBadRequest, err)
+			rest.sendError(w, http.StatusBadRequest, errors.New("Not valid data input"))
 			return
 		}
 	}
@@ -52,7 +53,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	if receivedYear != "" {
 		params.Year, err = strconv.Atoi(receivedYear)
 		if err != nil {
-			rest.sendError(w, http.StatusBadRequest, err)
+			rest.sendError(w, http.StatusBadRequest, errors.New("Not valid data input"))
 			return
 		}
 	}
@@ -60,7 +61,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	if receivedStart != "" {
 		err = json.Unmarshal([]byte(receivedStart), &params.Start)
 		if err != nil {
-			rest.sendError(w, http.StatusBadRequest, err)
+			rest.sendError(w, http.StatusBadRequest, errors.New("Not valid data input"))
 			return
 		}
 	}
@@ -68,7 +69,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	if receivedEnd != "" {
 		err = json.Unmarshal([]byte(receivedEnd), &params.End)
 		if err != nil {
-			rest.sendError(w, http.StatusBadRequest, err)
+			rest.sendError(w, http.StatusBadRequest, errors.New("Not valid data input"))
 			return
 		}
 	}
@@ -78,6 +79,11 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	events, err = rest.service.Events.GetEventsOfTheDay(&params)
+
+	if err != nil {
+		rest.sendError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	for _, event := range events {
 		json.NewEncoder(w).Encode(event)

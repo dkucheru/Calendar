@@ -2,20 +2,24 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/dkucheru/Calendar/structs"
+	"github.com/gorilla/mux"
 )
 
 func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	receivedId := query.Get("id")
+	// query := r.URL.Query()
+	// receivedId := query.Get("id")
+	mux := mux.Vars(r)
+	receivedId := mux["id"]
 
 	id, err := strconv.Atoi(receivedId)
 	if err != nil {
-		rest.sendError(w, http.StatusBadRequest, err)
+		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
 
@@ -24,7 +28,7 @@ func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
 
 	// If no body is associated return with StatusBadRequest
 	if err != nil {
-		rest.sendError(w, http.StatusBadRequest, err)
+		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
 
@@ -32,7 +36,7 @@ func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
 	var event structs.Event
 	err = json.Unmarshal(data, &event)
 	if err != nil {
-		rest.sendError(w, http.StatusBadRequest, err)
+		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
 
