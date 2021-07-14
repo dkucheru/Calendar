@@ -5,12 +5,10 @@ import (
 )
 
 type Config struct {
-	// Repository []*structs.Event
 	Repository db.Repository
 }
 
 type Service struct {
-	// repository []*structs.Event
 	repository db.Repository
 	Events     *eventService
 }

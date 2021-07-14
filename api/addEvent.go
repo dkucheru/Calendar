@@ -28,7 +28,7 @@ func (rest *Rest) addEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//add event to memory
-	newEvent, err := rest.service.Events.AddEvent(&event)
+	newEvent, err := rest.service.Events.AddEvent(event)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return

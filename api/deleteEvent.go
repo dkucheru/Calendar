@@ -13,7 +13,6 @@ func (rest *Rest) deleteEvent(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	mux := mux.Vars(r)
-	// query := r.URL.Query()
 	receivedId := mux["id"]
 
 	id, err = strconv.Atoi(receivedId)
