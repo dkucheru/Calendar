@@ -24,14 +24,31 @@ func New(address string, service *service.Service) *Rest {
 	}
 
 	api := mux.NewRouter()
+	api.HandleFunc("/users", rest.addUser).Methods("POST")
+	api.Handle("/users/{username}", rest.BasicAuthMiddleware(http.HandlerFunc(rest.changeTimezone))).Methods("PUT")
 
-	api.HandleFunc("/events", rest.addEvent).Methods("POST")
-	api.HandleFunc("/events/{id}", rest.deleteEvent).Methods("DELETE")
-	api.HandleFunc("/events/{id}", rest.updateEvent).Methods("PUT")
-	api.HandleFunc("/events", rest.allEvents).Methods("GET")
+	api.Handle("/events", rest.BasicAuthMiddleware(http.HandlerFunc(rest.addEvent))).Methods("POST")
+	api.Handle("/events", rest.BasicAuthMiddleware(http.HandlerFunc(rest.allEvents))).Methods("GET")
+	api.Handle("/events/{id}", rest.BasicAuthMiddleware(http.HandlerFunc(rest.deleteEvent))).Methods("DELETE")
+	api.Handle("/events/{id}", rest.BasicAuthMiddleware(http.HandlerFunc(rest.updateEvent))).Methods("PUT")
+
 	rest.mux = api
 
 	return rest
+}
+
+func (rest *Rest) BasicAuthMiddleware(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		err := rest.service.Events.CheckPassword(user, pass)
+		if !ok || err != nil {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Please enter your username and password for this site"`)
+			w.WriteHeader(401)
+			w.Write([]byte("Unauthorised.\n"))
+			return
+		}
+		handler(w, r)
+	}
 }
 
 func (rest *Rest) Listen() (err error) {
@@ -42,8 +59,9 @@ func (rest *Rest) Listen() (err error) {
 
 	r := http.NewServeMux()
 	r.Handle("/", rest.mux)
-
-	server := &http.Server{Handler: r}
+	server := &http.Server{
+		Handler: r,
+	}
 
 	rest.setupMiddleware()
 

@@ -26,8 +26,36 @@ func (s *eventService) AddEvent(newEvent structs.Event) (structs.Event, error) {
 		return structs.Event{}, err
 	}
 	newEvent.Id = s.repository.GetNextId()
-	s.repository.Add(newEvent)
+	s.repository.AddEvent(newEvent)
 	return newEvent, nil
+}
+
+// FIXME : separate user service
+func (s *eventService) AddUser(newUser structs.CreateUser) error {
+	return s.repository.AddUser(newUser)
+}
+
+func (s *eventService) CheckPassword(user string, pass string) error {
+	return s.repository.CheckCredentials(user, pass)
+}
+
+func (s *eventService) GetUserLocation(username string) (time.Location, error) {
+	userInfo, err := s.repository.GetUser(username)
+	if err != nil {
+		return time.Location{}, err
+	}
+	return userInfo.Location, nil
+}
+
+func (s *eventService) UpdateLocation(user string, newLocation time.Location) (time.Location, error) {
+	updatedUser, err := s.repository.GetUser(user)
+	if err != nil {
+		panic("Implement me")
+	}
+
+	updatedUser.Location = newLocation
+
+	return updatedUser.Location, nil
 }
 
 func (s *eventService) DeleteEvent(id int) error {

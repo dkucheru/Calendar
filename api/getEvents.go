@@ -29,6 +29,9 @@ const (
 func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	var params structs.EventParams
 
+	user, _, _ := r.BasicAuth()
+	userLocation, err := rest.service.Events.GetUserLocation(user)
+
 	query := r.URL.Query()
 	receivedSorting := query.Get("sorting")
 	params.Name = query.Get("name")
@@ -75,6 +78,11 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, event := range events {
+		event.Start = event.Start.In(&userLocation)
+		event.End = event.End.In(&userLocation)
+		if event.Alert != (time.Time{}) {
+			event.Alert = event.Alert.In(&userLocation)
+		}
 		json.NewEncoder(w).Encode(event)
 	}
 }
