@@ -127,7 +127,7 @@ func TestAdd(t *testing.T) {
 				t.Errorf("event was added incorrectly")
 			}
 
-			if newEventFromRepo != newEvent && err == nil {
+			if newEventFromRepo != nil && *newEventFromRepo != newEvent && err == nil {
 				t.Errorf("event was added incorrectly")
 			}
 		})
@@ -184,7 +184,7 @@ func TestUpdateEvent(t *testing.T) {
 			},
 			-1,
 			structs.Event{},
-			"no event with such id",
+			"event with id [-1] does not exist",
 		},
 		"No Name Field Update Event": {
 			structs.Event{
@@ -238,18 +238,22 @@ func TestUpdateEvent(t *testing.T) {
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
 			updatedEvent, err := testService.UpdateEvent(test.id, test.event)
-			if (updatedEvent == structs.Event{} && err == nil) || (updatedEvent == test.event && err != nil) {
-				t.Errorf("result returned by update function is incorrect")
+			if updatedEvent == (structs.Event{}) && err == nil {
+				t.Errorf("no errors in update function occured, but returned result is an empty struct")
 			}
 
-			test.event.Id = test.id
+			// if updatedEvent == test.event && err != nil {
+			// 	t.Errorf("an error occured in update func, but returned result is ")
+			// }
+
+			test.event.Id = testService.repository.GetLastUsedId()
 			if err == nil && updatedEvent != test.event {
 				t.Errorf("result returned by update function is incorrect")
 			}
 
 			wasUpdated, err2 := testService.repository.GetByID(test.id)
-			//check if event was indeed updated
-			if updatedEvent != wasUpdated && err == nil && err2 == nil {
+			// check if event was indeed updated
+			if err2 == nil && err == nil && updatedEvent != *wasUpdated {
 				t.Errorf("event with id [%v] was not updated correctly", test.id)
 			}
 
@@ -337,7 +341,13 @@ func TestGetEvent(t *testing.T) {
 					t.Errorf("event with id [%v] does not exist", v.Id)
 				}
 
-				if !testService.repository.MatchParams(event, test.params) {
+				resultMatchesInputParams := false
+				for _, match := range testService.repository.Get(test.params) {
+					if event == match {
+						resultMatchesInputParams = true
+					}
+				}
+				if !resultMatchesInputParams {
 					t.Errorf("result returned by get function does not correspond to input parameters")
 				}
 			}

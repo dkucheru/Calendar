@@ -86,7 +86,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RequestBody'
+              $ref: '#/components/schemas/Event'
             example:
               name: '1 on 1 Meeting'
               start: '2018-12-10T13:45:00.000Z'
@@ -146,7 +146,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RequestBody'
+              $ref: '#/components/schemas/UpdatedEvent'
             example:
               name: 'Updated 1 on 1 Meeting'
               start: '2018-12-10T13:45:00.000Z'
@@ -277,7 +277,7 @@ components:
       type: integer
       minimum: 1
       example: 2021
-    RequestBody:
+    Event:
       type: object
       properties:
         name:
@@ -295,6 +295,32 @@ components:
         alert:
           type: string
           example: '2018-12-10T14:00:00.000Z'
+      required:
+        - name
+        - start
+        - end
+    UpdatedEvent:
+      type: object
+      properties:
+        name:
+          type: string
+          example: '1 on 1 Meeting'
+        start:
+          type: string
+          example: '2018-12-10T13:45:00.000Z'
+        end:
+          type: string
+          example: '2018-12-10T14:00:00.000Z'
+        description:
+          type: string
+          example: '1 on 1 Meeting for onboarding'
+        alert:
+          type: string
+          example: '2018-12-10T14:00:00.000Z'
+      required:
+        - name
+        - start
+        - end
     EventFound:
       type: array
       items:
@@ -328,4 +354,4 @@ components:
         Status:
           type: integer
         Data: 
-          $ref: '#/components/schemas/RequestBody'
+          $ref: '#/components/schemas/Event'
