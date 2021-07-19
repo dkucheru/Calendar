@@ -5,14 +5,14 @@ import "github.com/dkucheru/Calendar/structs"
 // FIXME: add one more repository for users
 
 type Repository interface {
-	GetAll() []*structs.Event
-	GetByID(id int) (structs.Event, error)
-	AddEvent(structs.Event) error
+	Add(structs.Event) structs.Event
+	Get(structs.EventParams) []*structs.Event
+	GetByID(id int) (*structs.Event, error)
+	Update(id int, newEvent structs.Event) (updated structs.Event, err error)
+	Delete(structs.Event)
+	GetLastUsedId() int //this function currently is used only for testing purpuses
+
 	AddUser(structs.CreateUser) error
 	GetUser(string) (*structs.HashedInfo, error)
 	CheckCredentials(username string, pass string) error
-	Delete(structs.Event)
-	GetNextId() int
-	GetLastUsedId() int //this function currently is used only for testing purpuses
-	MatchParams(structs.Event, structs.EventParams) bool
 }

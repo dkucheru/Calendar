@@ -126,7 +126,7 @@ func TestAddOnMap(t *testing.T) {
 				t.Errorf("event with id [%v] was not found", newEvent.Id)
 			}
 
-			if newEventFromRepo != newEvent && err == nil {
+			if newEventFromRepo != nil && err == nil && *newEventFromRepo != newEvent {
 				t.Errorf("event returned by add function is not equal to the test event")
 			}
 		})
@@ -182,7 +182,7 @@ func TestUpdateEventOnMap(t *testing.T) {
 			},
 			-1,
 			structs.Event{},
-			"no event with such id",
+			"event with id [-1] does not exist",
 		},
 		"No Name Field Update Event": {
 			structs.Event{
@@ -240,7 +240,7 @@ func TestUpdateEventOnMap(t *testing.T) {
 				t.Errorf("result returned by update function is incorrect")
 			}
 
-			test.event.Id = test.id
+			test.event.Id = testService.repository.GetLastUsedId()
 			if err == nil && updatedEvent != test.event {
 				t.Errorf("result returned by update function is incorrect")
 			}
@@ -250,7 +250,7 @@ func TestUpdateEventOnMap(t *testing.T) {
 				t.Errorf("event with id [%v] was not found", test.id)
 			}
 			//check if event was indeed updated
-			if updatedEvent != wasUpdated && err == nil && err2 == nil {
+			if err == nil && err2 == nil && updatedEvent != *wasUpdated {
 				t.Errorf("event with id [%v] was not updated correctly", test.id)
 			}
 
@@ -338,7 +338,14 @@ func TestGetEventOnMap(t *testing.T) {
 					t.Errorf("event with id [%v] does not exist", v.Id)
 				}
 
-				if !testService.repository.MatchParams(event, test.params) {
+				resultMatchesInputParams := false
+				for _, match := range testService.repository.Get(test.params) {
+					if *event == *match {
+						resultMatchesInputParams = true
+					}
+				}
+
+				if !resultMatchesInputParams {
 					t.Errorf("result returned by get function does not correspond to input parameters")
 				}
 			}

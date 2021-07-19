@@ -25,9 +25,8 @@ func (s *eventService) AddEvent(newEvent structs.Event) (structs.Event, error) {
 	if !approved {
 		return structs.Event{}, err
 	}
-	newEvent.Id = s.repository.GetNextId()
-	s.repository.AddEvent(newEvent)
-	return newEvent, nil
+	returnedEvent := s.repository.Add(newEvent)
+	return returnedEvent, nil
 }
 
 // FIXME : separate user service
@@ -63,7 +62,7 @@ func (s *eventService) DeleteEvent(id int) error {
 	if err != nil {
 		return err
 	}
-	s.repository.Delete(foundEvent)
+	s.repository.Delete(*foundEvent)
 	return nil
 }
 
@@ -72,18 +71,7 @@ func (s *eventService) UpdateEvent(id int, newEvent structs.Event) (updated stru
 	if !approved {
 		return structs.Event{}, err
 	}
-
-	for _, event := range s.repository.GetAll() {
-		if event.Id == id {
-			event.Name = newEvent.Name
-			event.Start = newEvent.Start
-			event.End = newEvent.End
-			event.Alert = newEvent.Alert
-			event.Description = newEvent.Description
-			return *event, nil
-		}
-	}
-	return structs.Event{}, errors.New("no event with such id")
+	return s.repository.Update(id, newEvent)
 }
 
 func (s *eventService) GetEventsOfTheDay(p structs.EventParams) ([]structs.Event, error) {
@@ -92,10 +80,8 @@ func (s *eventService) GetEventsOfTheDay(p structs.EventParams) ([]structs.Event
 	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
 		return nil, errors.New("bad date parameters")
 	}
-	for _, event := range s.repository.GetAll() {
-		if s.repository.MatchParams(*event, p) {
-			result = append(result, *event)
-		}
+	for _, event := range s.repository.Get(p) {
+		result = append(result, *event)
 	}
 
 	if p.Sorting {
