@@ -32,5 +32,5 @@ type MandatoryFieldError struct {
 }
 
 func (e *MandatoryFieldError) Error() string {
-	return fmt.Sprintf("Mandatory field *%v* is not filled. Please, add a %v to the event", e.FieldName, e.FieldName)
+	return fmt.Sprintf("mandatory field *%v* is not filled. Please, add a %v to the event", e.FieldName, e.FieldName)
 }

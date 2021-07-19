@@ -7,7 +7,6 @@ import (
 )
 
 type App struct {
-	// Repository []*structs.Event
 	Repository db.Repository
 	Service    *service.Service
 	Api        *api.Rest
@@ -17,8 +16,7 @@ func New() (*App, error) {
 	var err error
 	app := &App{}
 
-	// var events []*structs.Event
-	app.Repository, err = db.NewDBRepository()
+	app.Repository, err = db.NewArrayRepository()
 	if err != nil {
 		return nil, err
 	}

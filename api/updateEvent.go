@@ -12,8 +12,6 @@ import (
 )
 
 func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
-	// query := r.URL.Query()
-	// receivedId := query.Get("id")
 	mux := mux.Vars(r)
 	receivedId := mux["id"]
 
@@ -41,7 +39,7 @@ func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//add event to memory
-	updatedEvent, err := rest.service.Events.UpdateEvent(id, &event)
+	updatedEvent, err := rest.service.Events.UpdateEvent(id, event)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return

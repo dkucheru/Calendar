@@ -1,7 +1,5 @@
 package service
 
-//not needed package
-
 import "github.com/dkucheru/Calendar/structs"
 
 type ByStartTime []structs.Event

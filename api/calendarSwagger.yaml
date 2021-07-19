@@ -1,0 +1,357 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Calendar API
+  description: This is a sample server Calendar server
+servers:
+  - url: http://localhost:8080
+paths:
+  /events:
+    get:
+      summary : Get events
+      description: Get information about event
+      parameters:
+        - name: day
+          in: query
+          description: selected day of the event
+          schema:
+            $ref: '#/components/schemas/Day'
+        - name: week
+          in: query
+          description: selected week of the event
+          schema:
+            $ref: '#/components/schemas/Week'
+        - name: month
+          in: query
+          description: selected month of the event
+          schema:
+            $ref: '#/components/schemas/Month' 
+        - name: year
+          in: query
+          description: selected year of the event
+          schema:
+           $ref: '#/components/schemas/Year' 
+            
+        - name: name
+          in: query
+          description: selected name of the event
+          schema:
+            type: string
+        
+        - name: start
+          in: query
+          description: selected start time of the event
+          schema:
+            type: string
+            
+        - name: end
+          in: query
+          description: selected end time of the event
+          schema:
+            type: string
+            example: '2018-12-10T13:45:00.000Z'
+        
+      responses:
+        '200':
+          description: Event successfully found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventFound'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                Status: 400
+                Data: "Invalid data input"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                Status: 500
+                Data : 'Bad date parameters'
+        'default':
+          description: Unexpected error
+    post:
+      summary : Add a new event
+      description: Add a new event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+            example:
+              name: '1 on 1 Meeting'
+              start: '2018-12-10T13:45:00.000Z'
+              end: '2018-12-10T14:00:00.000Z'
+              description: '1 on 1 Meeting for onboarding'
+              alert: '2018-12-10T14:00:00.000Z'
+      responses:
+        '200':
+          description: Successfully added new event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddedEventResponse'
+              example:
+                  Status: 200
+                  Data: 
+                    properties:
+                      name: '1 on 1 Meeting'
+                      start: '2018-12-10T13:45:00.000Z'
+                      end: '2018-12-10T14:00:00.000Z'
+                      description: '1 on 1 Meeting for onboarding'
+                      alert: '2018-12-10T14:00:00.000Z'
+        '400':
+          description: Invalid Data Format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                  Status: 400
+                  Data: 'Invalid Data Format'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                  Status: 500
+                  Data: 'Mandatory field *name* is not filled. Please, add a name to the event'
+        'default':
+          description: Unexpected error
+          
+  /events/{id}:
+    put:
+      summary: Update info of an event with specific id
+      description: Update an event with input json info
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatedEvent'
+            example:
+              name: 'Updated 1 on 1 Meeting'
+              start: '2018-12-10T13:45:00.000Z'
+              end: '2018-12-10T14:00:00.000Z'
+              description: '1 on 1 Meeting for onboarding'
+              alert: '2018-12-10T14:00:00.000Z'
+      responses:
+        '200':
+          description: Successfully updated an event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddedEventResponse'
+              example:
+                  Status: 200
+                  Data: 
+                    properties:
+                      name: 'Updated 1 on 1 Meeting'
+                      start: '2018-12-10T13:45:00.000Z'
+                      end: '2018-12-10T14:00:00.000Z'
+                      description: '1 on 1 Meeting for onboarding'
+                      alert: '2018-12-10T14:00:00.000Z'
+        '400':
+          description: Invalid Data Format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                  Status: 400
+                  Data: 'Invalid Data Format'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                  Status: 500
+                  Data: 'Mandatory field *name* is not filled. Please, add a name to the event'
+        'default':
+          description: Unexpected error
+          
+    delete:
+      summary: Returns result
+      description: Delete an event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successfully added new event
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Status:
+                    type: integer
+                    example: 1
+                  Data: 
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: '1 on 1 Meeting'
+                      start:
+                        type: string
+                        example: '2018-12-10T13:45:00.000Z'
+                      end:
+                        type: string
+                        example: '2018-12-10T14:00:00.000Z'
+                      description:
+                        type: string
+                        example: '1 on 1 Meeting for onboarding'
+                      alert:
+                        type: string
+                        example: '2018-12-10T14:00:00.000Z'
+        '400':
+          description: Invalid Data Format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Status:
+                    type: integer
+                    example: 400
+                  Data: 
+                    type: string
+                    example: 'Invalid Data Format'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Status:
+                    type: integer
+                    example: 500
+                  Data: 
+                    type: string
+                    example: 'No event with such id was found'
+        'default':
+          description: Unexpected error
+components:
+  schemas:
+    Day:
+      type: integer
+      minimum: 1
+      maximum: 31
+      example: 15
+    Week:
+      type: integer
+      minimum: 1
+      example: 2
+    Month:
+      type: integer
+      minimum: 1
+      maximum: 12
+      example: 6
+    Year:
+      type: integer
+      minimum: 1
+      example: 2021
+    Event:
+      type: object
+      properties:
+        name:
+          type: string
+          example: '1 on 1 Meeting'
+        start:
+          type: string
+          example: '2018-12-10T13:45:00.000Z'
+        end:
+          type: string
+          example: '2018-12-10T14:00:00.000Z'
+        description:
+          type: string
+          example: '1 on 1 Meeting for onboarding'
+        alert:
+          type: string
+          example: '2018-12-10T14:00:00.000Z'
+      required:
+        - name
+        - start
+        - end
+    UpdatedEvent:
+      type: object
+      properties:
+        name:
+          type: string
+          example: '1 on 1 Meeting'
+        start:
+          type: string
+          example: '2018-12-10T13:45:00.000Z'
+        end:
+          type: string
+          example: '2018-12-10T14:00:00.000Z'
+        description:
+          type: string
+          example: '1 on 1 Meeting for onboarding'
+        alert:
+          type: string
+          example: '2018-12-10T14:00:00.000Z'
+      required:
+        - name
+        - start
+        - end
+    EventFound:
+      type: array
+      items:
+        properties:
+          id:
+            type: integer
+            example: 1
+          name: 
+            type: string
+            example: 1 on 1 Meeting
+          start:
+            type: string
+            example: '2018-12-10T13:45:00Z'       
+          end:
+            type: string
+            example: '2018-12-10T14:00:00Z'
+          description:
+            type: string
+            example: '1 on 1 Meeting on Onboarding'     
+          alert:
+            type: string
+            example: '2018-12-10T14:00:00Z'
+    ErrorResponse:
+      properties:
+        Status:
+          type: integer
+        Data: 
+          type: string
+    AddedEventResponse:
+      properties:
+        Status:
+          type: integer
+        Data: 
+          $ref: '#/components/schemas/Event'
