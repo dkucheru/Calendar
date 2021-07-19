@@ -10,54 +10,33 @@ import (
 )
 
 type eventService struct {
-	repository db.Repository
+	repository db.EventsRepository
 }
 
-func newEventsService(repository db.Repository) *eventService {
+func newEventsService(repository db.EventsRepository) *eventService {
 	s := eventService{
 		repository: repository,
 	}
 	return &s
 }
 
-func (s *eventService) AddEvent(newEvent structs.Event) (structs.Event, error) {
+func (s *eventService) AddEvent(loc time.Location, newEvent structs.Event) (structs.Event, error) {
 	approved, err := s.checkData(newEvent)
 	if !approved {
 		return structs.Event{}, err
 	}
 	returnedEvent := s.repository.Add(newEvent)
+
+	returnedEvent.Start = newEvent.Start.In(&loc)
+	returnedEvent.End = newEvent.End.In(&loc)
+	if returnedEvent.Alert != (time.Time{}) {
+		returnedEvent.Alert = newEvent.Alert.In(&loc)
+	}
+
 	return returnedEvent, nil
 }
 
-// FIXME : separate user service
-func (s *eventService) AddUser(newUser structs.CreateUser) error {
-	return s.repository.AddUser(newUser)
-}
-
-func (s *eventService) CheckPassword(user string, pass string) error {
-	return s.repository.CheckCredentials(user, pass)
-}
-
-func (s *eventService) GetUserLocation(username string) (time.Location, error) {
-	userInfo, err := s.repository.GetUser(username)
-	if err != nil {
-		return time.Location{}, err
-	}
-	return userInfo.Location, nil
-}
-
-func (s *eventService) UpdateLocation(user string, newLocation time.Location) (time.Location, error) {
-	updatedUser, err := s.repository.GetUser(user)
-	if err != nil {
-		panic("Implement me")
-	}
-
-	updatedUser.Location = newLocation
-
-	return updatedUser.Location, nil
-}
-
-func (s *eventService) DeleteEvent(id int) error {
+func (s *eventService) DeleteEvent(id int, user string) error {
 	foundEvent, err := s.repository.GetByID(id)
 	if err != nil {
 		return err
@@ -66,12 +45,35 @@ func (s *eventService) DeleteEvent(id int) error {
 	return nil
 }
 
-func (s *eventService) UpdateEvent(id int, newEvent structs.Event) (updated structs.Event, err error) {
+func (s *eventService) GetById(id int, loc time.Location) (structs.Event, error) {
+
+	returnedEvent, err := s.repository.GetByID(id)
+	if err != nil {
+		return structs.Event{}, err
+	}
+	copy := *returnedEvent
+
+	copy.Start = copy.Start.In(&loc)
+	copy.End = copy.End.In(&loc)
+	if copy.Alert != (time.Time{}) {
+		copy.Alert = copy.Alert.In(&loc)
+	}
+	return copy, nil
+}
+
+func (s *eventService) UpdateEvent(id int, newEvent structs.Event, loc time.Location) (updated structs.Event, err error) {
 	approved, err := s.checkData(newEvent)
 	if !approved {
 		return structs.Event{}, err
 	}
-	return s.repository.Update(id, newEvent)
+	returnedEvent, err := s.repository.Update(id, newEvent)
+
+	returnedEvent.Start = newEvent.Start.In(&loc)
+	returnedEvent.End = newEvent.End.In(&loc)
+	if returnedEvent.Alert != (time.Time{}) {
+		returnedEvent.Alert = returnedEvent.Alert.In(time.Local)
+	}
+	return returnedEvent, err
 }
 
 func (s *eventService) GetEventsOfTheDay(p structs.EventParams) ([]structs.Event, error) {

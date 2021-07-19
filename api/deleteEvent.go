@@ -20,8 +20,8 @@ func (rest *Rest) deleteEvent(w http.ResponseWriter, r *http.Request) {
 		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
-
-	err = rest.service.Events.DeleteEvent(id)
+	user, _, _ := r.BasicAuth()
+	err = rest.service.Events.DeleteEvent(id, user)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return

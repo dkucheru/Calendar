@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/dkucheru/Calendar/structs"
 	"github.com/go-playground/validator/v10"
@@ -31,11 +32,11 @@ func (rest *Rest) addUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = rest.service.Events.AddUser(newUser)
+	_, err = rest.service.Users.AddUser(newUser)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	rest.sendData(w, "write smth decent here pls")
+	loc, err := time.LoadLocation(newUser.Location)
+	rest.sendData(w, time.Now().In(loc).String())
 }

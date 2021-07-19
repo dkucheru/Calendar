@@ -30,55 +30,41 @@ func compare(hash string, s string) error {
 }
 
 type ArrayRepository struct {
-	ArrayRepo  []*structs.Event
-	ArrayId    int
-	ArrayUsers map[string]*structs.HashedInfo
+	ArrayRepo []*structs.Event
+	ArrayId   int
+	// ArrayUsers map[string]*structs.HashedInfo
 }
 
 func NewArrayRepository() (*ArrayRepository, error) {
 	var events []*structs.Event
-	hashed := make(map[string]*structs.HashedInfo)
+	// hashed := make(map[string]*structs.HashedInfo)
 	repo := &ArrayRepository{
-		ArrayRepo:  events,
-		ArrayId:    1,
-		ArrayUsers: hashed,
+		ArrayRepo: events,
+		ArrayId:   1,
+		// ArrayUsers: hashed,
 	}
 	return repo, nil
 }
 
-func (a *ArrayRepository) CheckCredentials(username string, pass string) error {
-	userInfo, ok := a.ArrayUsers[username]
-	if !ok {
-		return errors.New("Username is not valid")
-	}
-
-	hashedPassword := userInfo.HashedPass
-
-	return compare(hashedPassword, pass)
-}
-
 func (a *ArrayRepository) Get(p structs.EventParams) []*structs.Event {
 	var matchedEvents []*structs.Event
-
 	for _, event := range a.ArrayRepo {
 		_, weekI := event.Start.ISOWeek()
-
-		if !(event.Start.Day() == p.Day || p.Day == 0) {
+		if event.Start.Day() == p.Day || p.Day == 0 {
 			matchedEvents = append(matchedEvents, event)
-		} else if !(p.Month == 0 || event.Start.Month() == time.Month(p.Month)) {
+		} else if p.Month == 0 || event.Start.Month() == time.Month(p.Month) {
 			matchedEvents = append(matchedEvents, event)
-		} else if !(p.Year == 0 || event.Start.Year() == p.Year) {
+		} else if p.Year == 0 || event.Start.Year() == p.Year {
 			matchedEvents = append(matchedEvents, event)
-		} else if !(p.Week == 0 || weekI == p.Week) {
+		} else if p.Week == 0 || weekI == p.Week {
 			matchedEvents = append(matchedEvents, event)
-		} else if !(p.Name == "" || strings.ToLower(event.Name) == strings.ToLower(p.Name)) {
+		} else if p.Name == "" || strings.ToLower(event.Name) == strings.ToLower(p.Name) {
 			matchedEvents = append(matchedEvents, event)
-		} else if !(p.Start == (time.Time{}) || event.Start == p.Start) {
+		} else if p.Start == (time.Time{}) || event.Start == p.Start {
 			matchedEvents = append(matchedEvents, event)
-		} else if !(p.End == (time.Time{}) || event.End == p.End) {
+		} else if p.End == (time.Time{}) || event.End == p.End {
 			matchedEvents = append(matchedEvents, event)
 		}
-
 	}
 	return matchedEvents
 }
@@ -113,32 +99,6 @@ func (a *ArrayRepository) Add(e structs.Event) structs.Event {
 	return e
 }
 
-func (a *ArrayRepository) AddUser(e structs.CreateUser) error {
-	_, ok := a.ArrayUsers[e.Username]
-	if ok {
-		message := "user with username [" + fmt.Sprint(e.Username) + "] already exists"
-		return errors.New(message)
-	}
-	generatedHash, err := generate(e.Password)
-	if err != nil {
-		panic("Implement me")
-	}
-
-	loc, err := time.LoadLocation(e.Location)
-	if err != nil {
-		panic("Implement me")
-	}
-
-	hashedData := structs.HashedInfo{
-		Username:   e.Username,
-		Location:   *loc,
-		HashedPass: generatedHash,
-	}
-
-	a.ArrayUsers[e.Username] = &hashedData
-	return nil
-}
-
 func (a *ArrayRepository) Delete(e structs.Event) {
 	for i, event := range a.ArrayRepo {
 		if event.Id == e.Id {
@@ -146,14 +106,6 @@ func (a *ArrayRepository) Delete(e structs.Event) {
 			return
 		}
 	}
-}
-
-func (a *ArrayRepository) GetUser(username string) (*structs.HashedInfo, error) {
-	_, ok := a.ArrayUsers[username]
-	if !ok {
-		return nil, errors.New("user does not exist")
-	}
-	return a.ArrayUsers[username], nil
 }
 
 func (a *ArrayRepository) GetLastUsedId() int {
@@ -169,24 +121,13 @@ type MapRepository struct {
 
 func NewMapRepository() (*MapRepository, error) {
 	events := make(map[int]structs.Event)
-	hashed := make(map[string]*structs.HashedInfo)
+	// hashed := make(map[string]*structs.HashedInfo)
 	repo := &MapRepository{
-		MapRepo:  events,
-		MapId:    1,
-		MapUsers: hashed,
+		MapRepo: events,
+		MapId:   1,
+		// MapUsers: hashed,
 	}
 	return repo, nil
-}
-
-func (m *MapRepository) CheckCredentials(username string, pass string) error {
-	userInfo, ok := m.MapUsers[username]
-	if !ok {
-		return errors.New("Username is not valid")
-	}
-
-	hashedPassword := userInfo.HashedPass
-
-	return compare(hashedPassword, pass)
 }
 
 func (m *MapRepository) Get(p structs.EventParams) []*structs.Event {
@@ -195,32 +136,24 @@ func (m *MapRepository) Get(p structs.EventParams) []*structs.Event {
 	for _, event := range m.MapRepo {
 		_, weekI := event.Start.ISOWeek()
 
-		if !(event.Start.Day() == p.Day || p.Day == 0) {
+		if event.Start.Day() == p.Day || p.Day == 0 {
 			matchedEvents = append(matchedEvents, &event)
-		} else if !(p.Month == 0 || event.Start.Month() == time.Month(p.Month)) {
+		} else if p.Month == 0 || event.Start.Month() == time.Month(p.Month) {
 			matchedEvents = append(matchedEvents, &event)
-		} else if !(p.Year == 0 || event.Start.Year() == p.Year) {
+		} else if p.Year == 0 || event.Start.Year() == p.Year {
 			matchedEvents = append(matchedEvents, &event)
-		} else if !(p.Week == 0 || weekI == p.Week) {
+		} else if p.Week == 0 || weekI == p.Week {
 			matchedEvents = append(matchedEvents, &event)
-		} else if !(p.Name == "" || strings.ToLower(event.Name) == strings.ToLower(p.Name)) {
+		} else if p.Name == "" || strings.ToLower(event.Name) == strings.ToLower(p.Name) {
 			matchedEvents = append(matchedEvents, &event)
-		} else if !(p.Start == (time.Time{}) || event.Start == p.Start) {
+		} else if p.Start == (time.Time{}) || event.Start == p.Start {
 			matchedEvents = append(matchedEvents, &event)
-		} else if !(p.End == (time.Time{}) || event.End == p.End) {
+		} else if p.End == (time.Time{}) || event.End == p.End {
 			matchedEvents = append(matchedEvents, &event)
 		}
 
 	}
 	return matchedEvents
-}
-
-func (m *MapRepository) GetUser(username string) (*structs.HashedInfo, error) {
-	_, ok := m.MapUsers[username]
-	if !ok {
-		return nil, errors.New("user does not exist")
-	}
-	return m.MapUsers[username], nil
 }
 
 func (m *MapRepository) GetByID(id int) (*structs.Event, error) {
@@ -250,30 +183,6 @@ func (m *MapRepository) Update(id int, newEvent structs.Event) (updated structs.
 	return foundEvent, nil
 }
 
-func (m *MapRepository) AddUser(e structs.CreateUser) error {
-	_, ok := m.MapUsers[e.Username]
-	if ok {
-		message := "user with username [" + fmt.Sprint(e.Username) + "] already exists"
-		return errors.New(message)
-	}
-	generatedHash, err := generate(e.Password)
-	if err != nil {
-		panic("Implement me")
-	}
-	loc, err := time.LoadLocation(e.Location)
-	if err != nil {
-		panic("Implement me")
-	}
-
-	hashedData := structs.HashedInfo{
-		Username:   e.Username,
-		Location:   *loc,
-		HashedPass: generatedHash,
-	}
-
-	m.MapUsers[e.Username] = &hashedData
-	return nil
-}
 func (m *MapRepository) Add(e structs.Event) structs.Event {
 	e.Id = m.MapId
 	m.MapId++
@@ -288,4 +197,72 @@ func (m *MapRepository) Delete(e structs.Event) {
 
 func (m *MapRepository) GetLastUsedId() int {
 	return m.MapId - 1
+}
+
+type UsersRepository struct {
+	Users map[string]structs.HashedInfo
+}
+
+func NewUsersRepository() (*UsersRepository, error) {
+	users := make(map[string]structs.HashedInfo)
+	repo := &UsersRepository{
+		Users: users,
+	}
+	return repo, nil
+}
+
+func (u *UsersRepository) AddUser(e structs.CreateUser) (structs.HashedInfo, error) {
+	_, ok := u.Users[e.Username]
+	if ok {
+		message := "user with username [" + e.Username + "] already exists"
+		return structs.HashedInfo{}, errors.New(message)
+	}
+	generatedHash, err := generate(e.Password)
+	if err != nil {
+		return structs.HashedInfo{}, err
+	}
+	loc, err := time.LoadLocation(e.Location)
+	if err != nil {
+		return structs.HashedInfo{}, err
+	}
+
+	hashedData := structs.HashedInfo{
+		Username:   e.Username,
+		Location:   *loc,
+		HashedPass: generatedHash,
+	}
+
+	u.Users[e.Username] = hashedData
+	return hashedData, nil
+}
+
+func (u *UsersRepository) GetUser(username string) (structs.HashedInfo, error) {
+	_, ok := u.Users[username]
+	if !ok {
+		return structs.HashedInfo{}, errors.New("user does not exist")
+	}
+	return u.Users[username], nil
+}
+
+func (u *UsersRepository) UpdateLocation(user string, loc time.Location) (structs.HashedInfo, error) {
+	found, ok := u.Users[user]
+	if !ok {
+		return structs.HashedInfo{}, errors.New("user does not exist")
+	}
+	found.Location = loc
+	u.Users[user] = found
+	return u.Users[user], nil
+}
+
+func (u *UsersRepository) CheckCredentials(username string, pass string) error {
+	userInfo, ok := u.Users[username]
+	if !ok {
+		return errors.New("username is not valid")
+	}
+
+	hashedPassword := userInfo.HashedPass
+	if err := compare(hashedPassword, pass); err != nil {
+		return errors.New("incorrect password")
+	}
+	return nil
 }

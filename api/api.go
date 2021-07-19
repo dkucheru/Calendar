@@ -40,7 +40,7 @@ func New(address string, service *service.Service) *Rest {
 func (rest *Rest) BasicAuthMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, pass, ok := r.BasicAuth()
-		err := rest.service.Events.CheckPassword(user, pass)
+		err := rest.service.Users.CheckPassword(user, pass)
 		if !ok || err != nil {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Please enter your username and password for this site"`)
 			w.WriteHeader(401)

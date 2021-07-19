@@ -5,19 +5,24 @@ import (
 )
 
 type Config struct {
-	Repository db.Repository
+	EventsRepo db.EventsRepository
+	UsersRepo  db.UserRepository
 }
 
 type Service struct {
-	repository db.Repository
+	eventsRepo db.EventsRepository
+	usersRepo  db.UserRepository
 	Events     *eventService
+	Users      *usersService
 }
 
 func NewService(conf *Config) *Service {
 	service := &Service{
-		repository: conf.Repository,
+		eventsRepo: conf.EventsRepo,
+		usersRepo:  conf.UsersRepo,
 	}
 
-	service.Events = newEventsService(service.repository)
+	service.Events = newEventsService(service.eventsRepo)
+	service.Users = newUsersService(service.usersRepo)
 	return service
 }

@@ -26,7 +26,7 @@ func (rest *Rest) changeTimezone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newLocation, err := rest.service.Events.UpdateLocation(username, *loc)
+	newLocation, err := rest.service.Users.UpdateLocation(username, *loc)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return

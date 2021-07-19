@@ -7,7 +7,8 @@ import (
 )
 
 type App struct {
-	Repository db.Repository
+	EventsRepo db.EventsRepository
+	UsersRepo  db.UserRepository
 	Service    *service.Service
 	Api        *api.Rest
 }
@@ -16,12 +17,17 @@ func New() (*App, error) {
 	var err error
 	app := &App{}
 
-	app.Repository, err = db.NewArrayRepository()
+	app.EventsRepo, err = db.NewArrayRepository()
 	if err != nil {
 		return nil, err
 	}
 
-	app.Service = service.NewService(&service.Config{Repository: app.Repository})
+	app.UsersRepo, err = db.NewUsersRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	app.Service = service.NewService(&service.Config{EventsRepo: app.EventsRepo, UsersRepo: app.UsersRepo})
 
 	app.Api = api.New(":8080", app.Service)
 	return app, nil

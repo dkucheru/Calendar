@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -30,7 +31,11 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	var params structs.EventParams
 
 	user, _, _ := r.BasicAuth()
-	userLocation, err := rest.service.Events.GetUserLocation(user)
+	userLocation, err := rest.service.Users.GetUserLocation(user)
+	if err != nil {
+		rest.sendError(w, http.StatusBadRequest, err)
+		return
+	}
 
 	query := r.URL.Query()
 	receivedSorting := query.Get("sorting")
@@ -77,6 +82,9 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(events) == 0 {
+		fmt.Println("events array is empty")
+	}
 	for _, event := range events {
 		event.Start = event.Start.In(&userLocation)
 		event.End = event.End.In(&userLocation)
@@ -85,6 +93,8 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewEncoder(w).Encode(event)
 	}
+
+	rest.sendData(w, "Everything is fine")
 }
 
 func checkAllParameters(r paramsCheck) bool {

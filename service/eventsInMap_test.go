@@ -111,7 +111,7 @@ func TestAddOnMap(t *testing.T) {
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			newEvent, err := testService.AddEvent(test.event)
+			newEvent, err := testService.AddEvent(*time.Local, test.event)
 
 			if !ErrorContains(err, test.errorMessage) {
 				t.Errorf("wrong error : got %q, wanted %q", err, test.errorMessage)
@@ -121,12 +121,12 @@ func TestAddOnMap(t *testing.T) {
 				t.Errorf("event was added incorrectly")
 			}
 
-			newEventFromRepo, err2 := testService.repository.GetByID(newEvent.Id)
+			newEventFromRepo, err2 := testService.GetById(newEvent.Id, *time.Local)
 			if err2 != nil && err == nil {
 				t.Errorf("event with id [%v] was not found", newEvent.Id)
 			}
 
-			if newEventFromRepo != nil && err == nil && *newEventFromRepo != newEvent {
+			if newEventFromRepo != (structs.Event{}) && err == nil && !structs.CompareTwoEvents(newEvent, newEventFromRepo) {
 				t.Errorf("event returned by add function is not equal to the test event")
 			}
 		})
@@ -138,7 +138,7 @@ func TestUpdateEventOnMap(t *testing.T) {
 	var testRepo, _ = db.NewMapRepository()
 	var testService = newEventsService(testRepo)
 
-	testService.AddEvent(structs.Event{
+	testService.AddEvent(*time.Local, structs.Event{
 		Name:        "Ok Test Event",
 		Description: "an ok event for testing",
 		Start:       time.Now(),
@@ -235,23 +235,28 @@ func TestUpdateEventOnMap(t *testing.T) {
 	}
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			updatedEvent, err := testService.UpdateEvent(test.id, test.event)
+			updatedEvent, err := testService.UpdateEvent(test.id, test.event, *time.Local)
 			if (updatedEvent == structs.Event{} && err == nil) || (updatedEvent == test.event && err != nil) {
 				t.Errorf("result returned by update function is incorrect")
 			}
 
-			test.event.Id = testService.repository.GetLastUsedId()
-			if err == nil && updatedEvent != test.event {
-				t.Errorf("result returned by update function is incorrect")
-			}
-
-			wasUpdated, err2 := testService.repository.GetByID(test.id)
+			wasUpdated, err2 := testService.GetById(test.id, *time.Local)
 			if err2 != nil && err == nil {
 				t.Errorf("event with id [%v] was not found", test.id)
 			}
 			//check if event was indeed updated
-			if err == nil && err2 == nil && updatedEvent != *wasUpdated {
+			if err == nil && err2 == nil && !structs.CompareTwoEvents(updatedEvent, wasUpdated) {
 				t.Errorf("event with id [%v] was not updated correctly", test.id)
+			}
+
+			test.event.Id = testService.repository.GetLastUsedId()
+			updatedEvent.Start = updatedEvent.Start.In(time.Local)
+			updatedEvent.End = updatedEvent.End.In(time.Local)
+			if updatedEvent.Alert != (time.Time{}) {
+				updatedEvent.Alert = updatedEvent.Alert.In(time.Local)
+			}
+			if err == nil && !structs.CompareTwoEvents(updatedEvent, test.event) {
+				t.Errorf("result returned by update function is incorrect")
 			}
 
 			if !ErrorContains(err, test.errorMessage) {
@@ -266,7 +271,7 @@ func TestGetEventOnMap(t *testing.T) {
 	var testRepo, _ = db.NewMapRepository()
 	var testService = newEventsService(testRepo)
 
-	testService.AddEvent(structs.Event{
+	testService.AddEvent(*time.Local, structs.Event{
 		Name:        "Ok Test Event",
 		Description: "an ok event for testing",
 		Start:       time.Now(),
@@ -333,14 +338,14 @@ func TestGetEventOnMap(t *testing.T) {
 					t.Errorf("result returned by get function is incorrect")
 				}
 
-				event, err2 := testService.repository.GetByID(v.Id)
+				event, err2 := testService.GetById(v.Id, *time.Local)
 				if v != (structs.Event{}) && err2 != nil {
 					t.Errorf("event with id [%v] does not exist", v.Id)
 				}
 
 				resultMatchesInputParams := false
 				for _, match := range testService.repository.Get(test.params) {
-					if *event == *match {
+					if structs.CompareTwoEvents(event, *match) {
 						resultMatchesInputParams = true
 					}
 				}
@@ -362,7 +367,7 @@ func TestDeleteEventOnMap(t *testing.T) {
 	var testRepo, _ = db.NewMapRepository()
 	var testService = newEventsService(testRepo)
 
-	testService.AddEvent(structs.Event{
+	testService.AddEvent(*time.Local, structs.Event{
 		Name:        "Ok Test Event",
 		Description: "an ok event for testing",
 		Start:       time.Now(),
@@ -379,12 +384,12 @@ func TestDeleteEventOnMap(t *testing.T) {
 	}
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := testService.DeleteEvent(test.id)
+			err := testService.DeleteEvent(test.id, "testUsername")
 			if !ErrorContains(err, test.errorMessage) {
 				t.Errorf("got %q, wanted %q", err, test.errorMessage)
 			}
 
-			_, err2 := testService.repository.GetByID(test.id)
+			_, err2 := testService.GetById(test.id, *time.Local)
 
 			message := "event with id [" + fmt.Sprint(test.id) + "] does not exist"
 			if err2.Error() != message && err == nil {
