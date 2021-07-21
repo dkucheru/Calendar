@@ -10,25 +10,24 @@ import (
 )
 
 func (rest *Rest) addEvent(w http.ResponseWriter, r *http.Request) {
-	//Read incoming JSON from request body
 	data, err := ioutil.ReadAll(r.Body)
-
-	// If no body is associated return with StatusBadRequest
 	if err != nil {
 		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
-
-	// Check if data is proper JSON (data validation)
-	var event structs.Event
-	err = json.Unmarshal(data, &event)
-	if err != nil {
-		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
+	var e structs.EventCreation
+	if err = json.Unmarshal(data, &e); err != nil {
+		rest.sendError(w, http.StatusBadRequest, err)
 		return
 	}
-
-	//add event to memory
-	newEvent, err := rest.service.Events.AddEvent(event)
+	user, _, _ := r.BasicAuth()
+	loc, err := rest.service.Users.GetUserLocation(user)
+	event, err := structs.CreateEvent(loc, e)
+	if err != nil {
+		rest.sendError(w, http.StatusBadRequest, err)
+		return
+	}
+	newEvent, err := rest.service.Events.AddEvent(loc, event)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return

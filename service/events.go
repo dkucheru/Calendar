@@ -10,50 +10,83 @@ import (
 )
 
 type eventService struct {
-	repository db.Repository
+	repository db.EventsRepository
 }
 
-func newEventsService(repository db.Repository) *eventService {
+func newEventsService(repository db.EventsRepository) *eventService {
 	s := eventService{
 		repository: repository,
 	}
 	return &s
 }
 
-func (s *eventService) AddEvent(newEvent structs.Event) (structs.Event, error) {
+func (s *eventService) AddEvent(loc time.Location, newEvent structs.Event) (structs.Event, error) {
 	approved, err := s.checkData(newEvent)
 	if !approved {
 		return structs.Event{}, err
 	}
 	returnedEvent := s.repository.Add(newEvent)
+
+	returnedEvent.Start = newEvent.Start.In(&loc)
+	returnedEvent.End = newEvent.End.In(&loc)
+	if returnedEvent.Alert != (time.Time{}) {
+		returnedEvent.Alert = newEvent.Alert.In(&loc)
+	}
+
 	return returnedEvent, nil
 }
 
-func (s *eventService) DeleteEvent(id int) error {
+func (s *eventService) DeleteEvent(id int, user string) error {
 	foundEvent, err := s.repository.GetByID(id)
 	if err != nil {
 		return err
 	}
-	s.repository.Delete(*foundEvent)
+	s.repository.Delete(foundEvent)
 	return nil
 }
 
-func (s *eventService) UpdateEvent(id int, newEvent structs.Event) (updated structs.Event, err error) {
+func (s *eventService) GetById(id int, loc time.Location) (structs.Event, error) {
+
+	returnedEvent, err := s.repository.GetByID(id)
+	if err != nil {
+		return structs.Event{}, err
+	}
+	returnedEvent.Start = returnedEvent.Start.In(&loc)
+	returnedEvent.End = returnedEvent.End.In(&loc)
+	if returnedEvent.Alert != (time.Time{}) {
+		returnedEvent.Alert = returnedEvent.Alert.In(&loc)
+	}
+	return returnedEvent, nil
+}
+
+func (s *eventService) UpdateEvent(id int, newEvent structs.Event, loc time.Location) (updated structs.Event, err error) {
 	approved, err := s.checkData(newEvent)
 	if !approved {
 		return structs.Event{}, err
 	}
-	return s.repository.Update(id, newEvent)
+	returnedEvent, err := s.repository.Update(id, newEvent)
+
+	returnedEvent.Start = newEvent.Start.In(&loc)
+	returnedEvent.End = newEvent.End.In(&loc)
+	if returnedEvent.Alert != (time.Time{}) {
+		returnedEvent.Alert = returnedEvent.Alert.In(time.Local)
+	}
+	return returnedEvent, err
 }
 
-func (s *eventService) GetEventsOfTheDay(p structs.EventParams) ([]structs.Event, error) {
+func (s *eventService) GetEventsOfTheDay(p structs.EventParams, loc time.Location) ([]structs.Event, error) {
 	var result []structs.Event
 
 	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
 		return nil, errors.New("bad date parameters")
 	}
 	for _, event := range s.repository.Get(p) {
-		result = append(result, *event)
+		event.Start = event.Start.In(&loc)
+		event.End = event.End.In(&loc)
+		if event.Alert != (time.Time{}) {
+			event.Alert = event.Alert.In(&loc)
+		}
+		result = append(result, event)
 	}
 
 	if p.Sorting {

@@ -112,7 +112,7 @@ func TestAdd(t *testing.T) {
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			newEvent, err := testService.AddEvent(test.event)
+			newEvent, err := testService.AddEvent(*time.Local, test.event)
 
 			if !ErrorContains(err, test.errorMessage) {
 				t.Errorf("wrong error : got %q, wanted %q", err, test.errorMessage)
@@ -122,12 +122,12 @@ func TestAdd(t *testing.T) {
 				t.Errorf("event was added incorrectly")
 			}
 
-			newEventFromRepo, err2 := testService.repository.GetByID(newEvent.Id)
+			newEventFromRepo, err2 := testService.GetById(newEvent.Id, *time.Local)
 			if err2 != nil && err == nil {
 				t.Errorf("event was added incorrectly")
 			}
 
-			if newEventFromRepo != nil && *newEventFromRepo != newEvent && err == nil {
+			if newEventFromRepo != (structs.Event{}) && err == nil && !structs.CompareTwoEvents(newEvent, newEventFromRepo) {
 				t.Errorf("event was added incorrectly")
 			}
 		})
@@ -140,7 +140,7 @@ func TestUpdateEvent(t *testing.T) {
 	var testRepo, _ = db.NewArrayRepository()
 	var testService = newEventsService(testRepo)
 
-	testService.AddEvent(structs.Event{
+	testService.AddEvent(*time.Local, structs.Event{
 		Name:        "Ok Test Event",
 		Description: "an ok event for testing",
 		Start:       time.Now(),
@@ -237,24 +237,26 @@ func TestUpdateEvent(t *testing.T) {
 	}
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			updatedEvent, err := testService.UpdateEvent(test.id, test.event)
+			updatedEvent, err := testService.UpdateEvent(test.id, test.event, *time.Local)
 			if updatedEvent == (structs.Event{}) && err == nil {
 				t.Errorf("no errors in update function occured, but returned result is an empty struct")
 			}
 
-			// if updatedEvent == test.event && err != nil {
-			// 	t.Errorf("an error occured in update func, but returned result is ")
-			// }
-
 			test.event.Id = testService.repository.GetLastUsedId()
-			if err == nil && updatedEvent != test.event {
-				t.Errorf("result returned by update function is incorrect")
+
+			wasUpdated, err2 := testService.GetById(test.id, *time.Local)
+			// check if event was indeed updated
+			if err2 == nil && err == nil && !structs.CompareTwoEvents(updatedEvent, wasUpdated) {
+				t.Errorf("event with id [%v] was not updated correctly", test.id)
 			}
 
-			wasUpdated, err2 := testService.repository.GetByID(test.id)
-			// check if event was indeed updated
-			if err2 == nil && err == nil && updatedEvent != *wasUpdated {
-				t.Errorf("event with id [%v] was not updated correctly", test.id)
+			updatedEvent.Start = updatedEvent.Start.In(time.Local)
+			updatedEvent.End = updatedEvent.End.In(time.Local)
+			if updatedEvent.Alert != (time.Time{}) {
+				updatedEvent.Alert = updatedEvent.Alert.In(time.Local)
+			}
+			if err == nil && !structs.CompareTwoEvents(updatedEvent, test.event) {
+				t.Errorf("result returned by update function is incorrect")
 			}
 
 			if !ErrorContains(err, test.errorMessage) {
@@ -269,7 +271,7 @@ func TestGetEvent(t *testing.T) {
 	var testRepo, _ = db.NewArrayRepository()
 	var testService = newEventsService(testRepo)
 
-	testService.AddEvent(structs.Event{
+	testService.AddEvent(*time.Local, structs.Event{
 		Name:        "Ok Test Event",
 		Description: "an ok event for testing",
 		Start:       time.Now(),
@@ -329,21 +331,21 @@ func TestGetEvent(t *testing.T) {
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			events, err := testService.GetEventsOfTheDay(test.params)
+			events, err := testService.GetEventsOfTheDay(test.params, *time.Local)
 			for _, v := range events {
 
 				if (v == structs.Event{} && err == nil) {
 					t.Errorf("result returned by get function is incorrect")
 				}
 
-				event, err2 := testService.repository.GetByID(v.Id)
+				event, err2 := testService.GetById(v.Id, *time.Local)
 				if v != (structs.Event{}) && err2 != nil {
 					t.Errorf("event with id [%v] does not exist", v.Id)
 				}
 
 				resultMatchesInputParams := false
 				for _, match := range testService.repository.Get(test.params) {
-					if event == match {
+					if structs.CompareTwoEvents(event, match) {
 						resultMatchesInputParams = true
 					}
 				}
@@ -363,7 +365,7 @@ func TestDeleteEvent(t *testing.T) {
 	var testRepo, _ = db.NewArrayRepository()
 	var testService = newEventsService(testRepo)
 
-	testService.AddEvent(structs.Event{
+	testService.AddEvent(*time.Local, structs.Event{
 		Name:        "Ok Test Event",
 		Description: "an ok event for testing",
 		Start:       time.Now(),
@@ -380,12 +382,12 @@ func TestDeleteEvent(t *testing.T) {
 	}
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := testService.DeleteEvent(test.id)
+			err := testService.DeleteEvent(test.id, "testUsername")
 			if !ErrorContains(err, test.errorMessage) {
 				t.Errorf("got %q, wanted %q", err, test.errorMessage)
 			}
 
-			_, err2 := testService.repository.GetByID(test.id)
+			_, err2 := testService.GetById(test.id, *time.Local)
 
 			message := "event with id [" + fmt.Sprint(test.id) + "] does not exist"
 			if err2.Error() != message && err == nil {

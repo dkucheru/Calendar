@@ -29,6 +29,13 @@ const (
 func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	var params structs.EventParams
 
+	user, _, _ := r.BasicAuth()
+	loc, err := rest.service.Users.GetUserLocation(user)
+	if err != nil {
+		rest.sendError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	query := r.URL.Query()
 	receivedSorting := query.Get("sorting")
 	params.Name = query.Get("name")
@@ -68,15 +75,16 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 		params.Sorting = true
 	}
 
-	events, err := rest.service.Events.GetEventsOfTheDay(params)
+	events, err := rest.service.Events.GetEventsOfTheDay(params, loc)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
-
 	for _, event := range events {
 		json.NewEncoder(w).Encode(event)
 	}
+
+	rest.sendData(w, "Everything is fine")
 }
 
 func checkAllParameters(r paramsCheck) bool {

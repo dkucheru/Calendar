@@ -14,32 +14,36 @@ import (
 func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
 	mux := mux.Vars(r)
 	receivedId := mux["id"]
-
 	id, err := strconv.Atoi(receivedId)
 	if err != nil {
 		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
 
-	//Read incoming JSON from request body
 	data, err := ioutil.ReadAll(r.Body)
-
-	// If no body is associated return with StatusBadRequest
 	if err != nil {
 		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
 		return
 	}
 
-	// Check if data is proper JSON (data validation)
-	var event structs.Event
-	err = json.Unmarshal(data, &event)
+	user, _, _ := r.BasicAuth()
+	loc, err := rest.service.Users.GetUserLocation(user)
 	if err != nil {
-		rest.sendError(w, http.StatusBadRequest, errors.New("Invalid Data Format"))
+		rest.sendError(w, http.StatusBadRequest, err)
+		return
+	}
+	var e structs.EventCreation
+	if err = json.Unmarshal(data, &e); err != nil {
+		rest.sendError(w, http.StatusBadRequest, err)
+		return
+	}
+	event, err := structs.CreateEvent(loc, e)
+	if err != nil {
+		rest.sendError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	//add event to memory
-	updatedEvent, err := rest.service.Events.UpdateEvent(id, event)
+	updatedEvent, err := rest.service.Events.UpdateEvent(id, event, loc)
 	if err != nil {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
