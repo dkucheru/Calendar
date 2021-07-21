@@ -331,7 +331,7 @@ func TestGetEvent(t *testing.T) {
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			events, err := testService.GetEventsOfTheDay(test.params)
+			events, err := testService.GetEventsOfTheDay(test.params, *time.Local)
 			for _, v := range events {
 
 				if (v == structs.Event{} && err == nil) {
@@ -345,7 +345,7 @@ func TestGetEvent(t *testing.T) {
 
 				resultMatchesInputParams := false
 				for _, match := range testService.repository.Get(test.params) {
-					if structs.CompareTwoEvents(event, *match) {
+					if structs.CompareTwoEvents(event, match) {
 						resultMatchesInputParams = true
 					}
 				}

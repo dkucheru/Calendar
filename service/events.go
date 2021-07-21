@@ -41,7 +41,7 @@ func (s *eventService) DeleteEvent(id int, user string) error {
 	if err != nil {
 		return err
 	}
-	s.repository.Delete(*foundEvent)
+	s.repository.Delete(foundEvent)
 	return nil
 }
 
@@ -51,14 +51,12 @@ func (s *eventService) GetById(id int, loc time.Location) (structs.Event, error)
 	if err != nil {
 		return structs.Event{}, err
 	}
-	copy := *returnedEvent
-
-	copy.Start = copy.Start.In(&loc)
-	copy.End = copy.End.In(&loc)
-	if copy.Alert != (time.Time{}) {
-		copy.Alert = copy.Alert.In(&loc)
+	returnedEvent.Start = returnedEvent.Start.In(&loc)
+	returnedEvent.End = returnedEvent.End.In(&loc)
+	if returnedEvent.Alert != (time.Time{}) {
+		returnedEvent.Alert = returnedEvent.Alert.In(&loc)
 	}
-	return copy, nil
+	return returnedEvent, nil
 }
 
 func (s *eventService) UpdateEvent(id int, newEvent structs.Event, loc time.Location) (updated structs.Event, err error) {
@@ -76,14 +74,19 @@ func (s *eventService) UpdateEvent(id int, newEvent structs.Event, loc time.Loca
 	return returnedEvent, err
 }
 
-func (s *eventService) GetEventsOfTheDay(p structs.EventParams) ([]structs.Event, error) {
+func (s *eventService) GetEventsOfTheDay(p structs.EventParams, loc time.Location) ([]structs.Event, error) {
 	var result []structs.Event
 
 	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
 		return nil, errors.New("bad date parameters")
 	}
 	for _, event := range s.repository.Get(p) {
-		result = append(result, *event)
+		event.Start = event.Start.In(&loc)
+		event.End = event.End.In(&loc)
+		if event.Alert != (time.Time{}) {
+			event.Alert = event.Alert.In(&loc)
+		}
+		result = append(result, event)
 	}
 
 	if p.Sorting {

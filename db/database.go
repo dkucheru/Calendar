@@ -22,13 +22,6 @@ func generate(s string) (string, error) {
 	return hash, nil
 }
 
-//Compare string to generated hash
-func compare(hash string, s string) error {
-	incoming := []byte(s)
-	existing := []byte(hash)
-	return bcrypt.CompareHashAndPassword(existing, incoming)
-}
-
 type ArrayRepository struct {
 	ArrayRepo []*structs.Event
 	ArrayId   int
@@ -46,34 +39,44 @@ func NewArrayRepository() (*ArrayRepository, error) {
 	return repo, nil
 }
 
-func (a *ArrayRepository) Get(p structs.EventParams) []*structs.Event {
-	var matchedEvents []*structs.Event
+func (a *ArrayRepository) Get(p structs.EventParams) []structs.Event {
+	var matchedEvents []structs.Event
 	for _, event := range a.ArrayRepo {
 		_, weekI := event.Start.ISOWeek()
 		if event.Start.Day() == p.Day || p.Day == 0 {
-			matchedEvents = append(matchedEvents, event)
+			matchedEvents = append(matchedEvents, *event)
 		} else if p.Month == 0 || event.Start.Month() == time.Month(p.Month) {
-			matchedEvents = append(matchedEvents, event)
+			matchedEvents = append(matchedEvents, *event)
 		} else if p.Year == 0 || event.Start.Year() == p.Year {
-			matchedEvents = append(matchedEvents, event)
+			matchedEvents = append(matchedEvents, *event)
 		} else if p.Week == 0 || weekI == p.Week {
-			matchedEvents = append(matchedEvents, event)
+			matchedEvents = append(matchedEvents, *event)
 		} else if p.Name == "" || strings.ToLower(event.Name) == strings.ToLower(p.Name) {
-			matchedEvents = append(matchedEvents, event)
+			matchedEvents = append(matchedEvents, *event)
 		} else if p.Start == (time.Time{}) || event.Start == p.Start {
-			matchedEvents = append(matchedEvents, event)
+			matchedEvents = append(matchedEvents, *event)
 		} else if p.End == (time.Time{}) || event.End == p.End {
-			matchedEvents = append(matchedEvents, event)
+			matchedEvents = append(matchedEvents, *event)
 		}
 	}
 	return matchedEvents
 }
 
 func (a *ArrayRepository) Update(id int, newEvent structs.Event) (updated structs.Event, err error) {
-	foundEvent, err := a.GetByID(id)
-	if err != nil {
-		return structs.Event{}, err
+	var foundEvent *structs.Event
+	for _, event := range a.ArrayRepo {
+		if event.Id == id {
+			foundEvent = event
+		}
 	}
+	if foundEvent == nil {
+		message := "event with id [" + fmt.Sprint(id) + "] does not exist"
+		return structs.Event{}, errors.New(message)
+	}
+	// foundEvent, err := a.GetByID(id)
+	// if err != nil {
+	// 	return structs.Event{}, err
+	// }
 	foundEvent.Name = newEvent.Name
 	foundEvent.Start = newEvent.Start
 	foundEvent.End = newEvent.End
@@ -82,14 +85,14 @@ func (a *ArrayRepository) Update(id int, newEvent structs.Event) (updated struct
 	return *foundEvent, nil
 }
 
-func (a *ArrayRepository) GetByID(id int) (*structs.Event, error) {
+func (a *ArrayRepository) GetByID(id int) (structs.Event, error) {
 	for _, event := range a.ArrayRepo {
 		if event.Id == id {
-			return event, nil
+			return *event, nil
 		}
 	}
 	message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-	return nil, errors.New(message)
+	return structs.Event{}, errors.New(message)
 }
 
 func (a *ArrayRepository) Add(e structs.Event) structs.Event {
@@ -130,39 +133,39 @@ func NewMapRepository() (*MapRepository, error) {
 	return repo, nil
 }
 
-func (m *MapRepository) Get(p structs.EventParams) []*structs.Event {
-	var matchedEvents []*structs.Event
+func (m *MapRepository) Get(p structs.EventParams) []structs.Event {
+	var matchedEvents []structs.Event
 
 	for _, event := range m.MapRepo {
 		_, weekI := event.Start.ISOWeek()
 
 		if event.Start.Day() == p.Day || p.Day == 0 {
-			matchedEvents = append(matchedEvents, &event)
+			matchedEvents = append(matchedEvents, event)
 		} else if p.Month == 0 || event.Start.Month() == time.Month(p.Month) {
-			matchedEvents = append(matchedEvents, &event)
+			matchedEvents = append(matchedEvents, event)
 		} else if p.Year == 0 || event.Start.Year() == p.Year {
-			matchedEvents = append(matchedEvents, &event)
+			matchedEvents = append(matchedEvents, event)
 		} else if p.Week == 0 || weekI == p.Week {
-			matchedEvents = append(matchedEvents, &event)
+			matchedEvents = append(matchedEvents, event)
 		} else if p.Name == "" || strings.ToLower(event.Name) == strings.ToLower(p.Name) {
-			matchedEvents = append(matchedEvents, &event)
+			matchedEvents = append(matchedEvents, event)
 		} else if p.Start == (time.Time{}) || event.Start == p.Start {
-			matchedEvents = append(matchedEvents, &event)
+			matchedEvents = append(matchedEvents, event)
 		} else if p.End == (time.Time{}) || event.End == p.End {
-			matchedEvents = append(matchedEvents, &event)
+			matchedEvents = append(matchedEvents, event)
 		}
 
 	}
 	return matchedEvents
 }
 
-func (m *MapRepository) GetByID(id int) (*structs.Event, error) {
+func (m *MapRepository) GetByID(id int) (structs.Event, error) {
 	foundEvent, ok := m.MapRepo[id]
 	if !ok {
 		message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-		return nil, errors.New(message)
+		return structs.Event{}, errors.New(message)
 	}
-	return &foundEvent, nil
+	return foundEvent, nil
 }
 
 func (m *MapRepository) Update(id int, newEvent structs.Event) (updated structs.Event, err error) {
@@ -252,17 +255,4 @@ func (u *UsersRepository) UpdateLocation(user string, loc time.Location) (struct
 	found.Location = loc
 	u.Users[user] = found
 	return u.Users[user], nil
-}
-
-func (u *UsersRepository) CheckCredentials(username string, pass string) error {
-	userInfo, ok := u.Users[username]
-	if !ok {
-		return errors.New("username is not valid")
-	}
-
-	hashedPassword := userInfo.HashedPass
-	if err := compare(hashedPassword, pass); err != nil {
-		return errors.New("incorrect password")
-	}
-	return nil
 }
