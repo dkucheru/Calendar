@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+
 	"github.com/dkucheru/Calendar/api"
 	"github.com/dkucheru/Calendar/db"
 	"github.com/dkucheru/Calendar/service"
@@ -17,12 +19,21 @@ func New() (*App, error) {
 	var err error
 	app := &App{}
 
-	app.EventsRepo, err = db.NewArrayRepository()
+	dbUser, dbPassword, dbName :=
+		os.Getenv("POSTGRES_USER"),
+		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_DB")
+
+	database, err := db.Initialize(dbUser, dbPassword, dbName)
+
+	// app.EventsRepo, err = db.NewArrayRepository()
+	app.EventsRepo, err = db.NewDatabaseRepository(database)
 	if err != nil {
 		return nil, err
 	}
 
-	app.UsersRepo, err = db.NewUsersRepository()
+	// app.UsersRepo, err = db.NewUsersInMemoryRepository()
+	app.UsersRepo, err = db.NewUsersDBRepository(database)
 	if err != nil {
 		return nil, err
 	}

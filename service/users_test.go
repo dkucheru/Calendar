@@ -9,7 +9,7 @@ import (
 )
 
 func AddUser(t *testing.T) {
-	var testRepo, _ = db.NewUsersRepository()
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {
@@ -61,7 +61,7 @@ func AddUser(t *testing.T) {
 }
 
 func UpdateUserTimezone(t *testing.T) {
-	var testRepo, _ = db.NewUsersRepository()
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {
@@ -104,7 +104,7 @@ func UpdateUserTimezone(t *testing.T) {
 }
 
 func CheckPassword(t *testing.T) {
-	var testRepo, _ = db.NewUsersRepository()
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {
@@ -141,7 +141,7 @@ func CheckPassword(t *testing.T) {
 }
 
 func GetUserLocation(t *testing.T) {
-	var testRepo, _ = db.NewUsersRepository()
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {

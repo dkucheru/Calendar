@@ -344,7 +344,11 @@ func TestGetEventOnMap(t *testing.T) {
 				}
 
 				resultMatchesInputParams := false
-				for _, match := range testService.repository.Get(test.params) {
+				events, err := testService.repository.Get(test.params)
+				if err != nil {
+					t.Errorf(err.Error())
+				}
+				for _, match := range events {
 					if structs.CompareTwoEvents(event, match) {
 						resultMatchesInputParams = true
 					}

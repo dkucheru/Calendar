@@ -1,0 +1,4 @@
+postgres:
+    dialect: postgres
+    datasource: "postgres://dkucheru:burritos12345678@localhost:5432/calendar?sslmode=disable"
+    dir: migrations

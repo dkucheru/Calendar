@@ -45,6 +45,7 @@ func (rest *Rest) BasicAuthMiddleware(handler http.HandlerFunc) http.HandlerFunc
 			w.Header().Set("WWW-Authenticate", `Basic realm="Please enter your username and password for this site"`)
 			w.WriteHeader(401)
 			w.Write([]byte("Unauthorised.\n"))
+			log.Println(err.Error())
 			return
 		}
 		handler(w, r)

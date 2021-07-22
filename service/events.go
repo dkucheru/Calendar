@@ -25,7 +25,10 @@ func (s *eventService) AddEvent(loc time.Location, newEvent structs.Event) (stru
 	if !approved {
 		return structs.Event{}, err
 	}
-	returnedEvent := s.repository.Add(newEvent)
+	returnedEvent, err := s.repository.Add(newEvent)
+	if err != nil {
+		return structs.Event{}, err
+	}
 
 	returnedEvent.Start = newEvent.Start.In(&loc)
 	returnedEvent.End = newEvent.End.In(&loc)
@@ -80,7 +83,11 @@ func (s *eventService) GetEventsOfTheDay(p structs.EventParams, loc time.Locatio
 	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
 		return nil, errors.New("bad date parameters")
 	}
-	for _, event := range s.repository.Get(p) {
+	receivedEvents, err := s.repository.Get(p)
+	if err != nil {
+		return []structs.Event{}, err
+	}
+	for _, event := range receivedEvents {
 		event.Start = event.Start.In(&loc)
 		event.End = event.End.In(&loc)
 		if event.Alert != (time.Time{}) {
