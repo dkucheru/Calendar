@@ -14,9 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Initialize(username, password, database string) (*sql.DB, error) {
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		HOST, PORT, username, password, database)
+func Initialize(dsn string) (*sql.DB, error) {
 	fmt.Println(dsn)
 	conn, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -29,11 +27,6 @@ func Initialize(username, password, database string) (*sql.DB, error) {
 	log.Println("Database connection established")
 	return conn, nil
 }
-
-const (
-	HOST = "database"
-	PORT = 5432
-)
 
 type UsersDBRepository struct {
 	Conn *sql.DB
@@ -55,8 +48,6 @@ func (db *UsersDBRepository) AddUser(e structs.CreateUser) (structs.HashedInfo, 
 	query := `INSERT INTO users (username, hashedpass, userlocation) VALUES ($1, $2, $3);`
 	_, err = db.Conn.Query(query, e.Username, generatedHash, e.Location)
 	if err != nil {
-		fmt.Println("error query insert user")
-		fmt.Println(err.Error())
 		return structs.HashedInfo{}, err
 	}
 
@@ -81,8 +72,6 @@ func (db *UsersDBRepository) GetUser(user string) (structs.HashedInfo, error) {
 		return structs.HashedInfo{}, err
 	}
 	if err != nil {
-		fmt.Println("issue with scan")
-		fmt.Println(err.Error())
 		return structs.HashedInfo{}, err
 	}
 	loc, err := time.LoadLocation(item.Location)
@@ -98,7 +87,7 @@ func (db *UsersDBRepository) GetUser(user string) (structs.HashedInfo, error) {
 
 func (db *UsersDBRepository) UpdateLocation(user string, loc time.Location) (structs.HashedInfo, error) {
 	var event structs.CreateUser
-	query := `UPDATE events 
+	query := `UPDATE users 
 	SET userlocation = $1
 	 WHERE username=$2 RETURNING username,hashedpass,userlocation;`
 	err := db.Conn.QueryRow(query, loc.String(), user).
@@ -132,34 +121,30 @@ func NewDatabaseRepository(conn *sql.DB) (*EventsDBRepository, error) {
 }
 
 func (db *EventsDBRepository) Add(e structs.Event) (structs.Event, error) {
-	var id int
+	res := structs.Event{}
 	query := `INSERT INTO events (event_name,event_start,event_end,event_description, event_alert) 
-	VALUES ($1, $2,$3,$4,$5) RETURNING eventid`
-	err := db.Conn.QueryRow(query, e.Name, e.Start, e.End, e.Description, e.Alert).Scan(&id)
+	VALUES ($1, $2,$3,$4,$5) RETURNING eventid,event_name,event_start,event_end,event_description, event_alert`
+	err := db.Conn.QueryRow(query, e.Name, e.Start, e.End, e.Description, e.Alert).
+		Scan(&res.Id, &res.Name, &res.Start, &res.End, &res.Description, &res.Alert)
 	if err != nil {
-		fmt.Println("error with query add event")
 		return structs.Event{}, err
 	}
-	justAdded, err := db.GetByID(id)
-	if err != nil {
-		fmt.Println("error finding event")
-		return structs.Event{}, err
-	}
-	return justAdded, nil
+	return res, nil
 }
 
 func (db *EventsDBRepository) Get(p structs.EventParams) ([]structs.Event, error) {
-	var list []structs.Event
 	query :=
 		`SELECT eventid,event_name,event_start,event_end,event_description, event_alert
 	FROM events
-	WHERE event_name = $1 OR date_part('day', timestamp event_start) = $2 OR 
-	date_part('week', timestamp event_start) = $3 OR date_part('month', timestamp event_start) = $4 
-	OR date_part('year', timestamp event_start) = $5 OR event_start = $6 OR event_end = $7
-	IF $8 THEN
-		ORDER BY ID DESC
-	END IF;`
-	rows, err := db.Conn.Query(query, p.Name, p.Day, p.Week, p.Month, p.Year, p.Start, p.End, p.Sorting)
+	WHERE (event_name = $1 OR $1 = '') AND
+	(date_part('day', event_start) = $2 OR $2 = 0) AND
+	(date_part('week', event_start) = $3 OR $3 = 0) AND
+	(date_part('month', event_start) = $4 OR $4 = 0) AND
+	(date_part('year', event_start) = $5 OR $5 = 0) AND
+	(event_start = $6 OR $6 = '0001-01-01 00:00:00'::timestamp) AND
+	(event_end = $7 OR $7 = '0001-01-01 00:00:00'::timestamp);`
+	rows, err := db.Conn.Query(query, p.Name, p.Day, p.Week, p.Month, p.Year, p.Start, p.End)
+	var list []structs.Event
 	if err != nil {
 		return list, err
 	}
@@ -193,7 +178,7 @@ func (db *EventsDBRepository) GetByID(id int) (structs.Event, error) {
 func (db *EventsDBRepository) Update(id int, e structs.Event) (updated structs.Event, err error) {
 	var event structs.Event
 	query := `UPDATE events 
-	SET event_name = $1, event_start = $2, event_end = $3, event_description = &4, event_alert = $5
+	SET event_name = $1, event_start = $2, event_end = $3, event_description = $4, event_alert = $5
 	 WHERE eventid=$6 RETURNING eventid,event_name,event_start,event_end,event_description, event_alert;`
 	err = db.Conn.QueryRow(query, e.Name, e.Start, e.End, e.Description, e.Alert, id).
 		Scan(&event.Id, &event.Name, &event.Start, &event.End, &event.Description, &event.Alert)
@@ -293,10 +278,6 @@ func (a *ArrayRepository) Update(id int, newEvent structs.Event) (updated struct
 		message := "event with id [" + fmt.Sprint(id) + "] does not exist"
 		return structs.Event{}, errors.New(message)
 	}
-	// foundEvent, err := a.GetByID(id)
-	// if err != nil {
-	// 	return structs.Event{}, err
-	// }
 	foundEvent.Name = newEvent.Name
 	foundEvent.Start = newEvent.Start
 	foundEvent.End = newEvent.End

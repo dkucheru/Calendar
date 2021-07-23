@@ -79,7 +79,6 @@ func (s *eventService) UpdateEvent(id int, newEvent structs.Event, loc time.Loca
 
 func (s *eventService) GetEventsOfTheDay(p structs.EventParams, loc time.Location) ([]structs.Event, error) {
 	var result []structs.Event
-
 	if p.Day < 0 || p.Week < 0 || p.Month < 0 || p.Year < 0 {
 		return nil, errors.New("bad date parameters")
 	}

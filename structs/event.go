@@ -107,6 +107,17 @@ type EventParams struct {
 	Sorting bool
 }
 
+type URLParams struct {
+	Day     string
+	Week    string
+	Month   string
+	Year    string
+	Name    string
+	Start   string
+	End     string
+	Sorting string
+}
+
 var GlobalId int
 
 type MandatoryFieldError struct {

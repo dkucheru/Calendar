@@ -6,3 +6,6 @@ html_test:
 
 run:
 	go run ./cmd/
+
+docker-build:
+	cd /appCalendar/cmd/ && CGO_ENABLED=0 GOOS=linux go build

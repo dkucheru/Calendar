@@ -1,14 +1,12 @@
 
 -- +migrate Up
-CREATE SEQUENCE events_id_seq;
-
 CREATE TABLE IF NOT EXISTS events (
-    eventid           INTEGER       NOT NULL DEFAULT nextval('events_id_seq'),
-    event_name        VARCHAR(255)  NOT NULL,
-    event_start       DATE          NOT NULL,
-    event_end         DATE          NOT NULL,
+    eventid           BIGSERIAL                     NOT NULL,
+    event_name        VARCHAR(255)                  NOT NULL,
+    event_start       TIMESTAMP WITHOUT TIME ZONE   NOT NULL,
+    event_end         TIMESTAMP WITHOUT TIME ZONE   NOT NULL,
     event_description VARCHAR(255),
-    event_alert       DATE,
+    event_alert       TIMESTAMP WITHOUT TIME ZONE,
     PRIMARY KEY (eventid)
 );
 
@@ -22,4 +20,3 @@ CREATE TABLE IF NOT EXISTS users (
 -- +migrate Down
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS events;
-DROP SEQUENCE IF EXISTS events_id_seq;
