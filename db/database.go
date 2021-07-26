@@ -15,7 +15,7 @@ import (
 )
 
 func Initialize(dsn string) (*sql.DB, error) {
-	fmt.Println(dsn)
+	// fmt.Println(dsn)
 	conn, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
@@ -26,6 +26,22 @@ func Initialize(dsn string) (*sql.DB, error) {
 	}
 	log.Println("Database connection established")
 	return conn, nil
+}
+
+func (db *UsersDBRepository) ClearRepoData() error {
+	_, err := db.Conn.Query("TRUNCATE users;")
+	if err != nil {
+		return errors.New("error occured when truncating all tables :" + err.Error())
+	}
+	return nil
+}
+
+func (db *EventsDBRepository) ClearRepoData() error {
+	_, err := db.Conn.Query("TRUNCATE events RESTART IDENTITY;")
+	if err != nil {
+		return errors.New("error occured when truncating all tables :" + err.Error())
+	}
+	return nil
 }
 
 type UsersDBRepository struct {
@@ -48,7 +64,7 @@ func (db *UsersDBRepository) AddUser(e structs.CreateUser) (structs.HashedInfo, 
 	query := `INSERT INTO users (username, hashedpass, userlocation) VALUES ($1, $2, $3);`
 	_, err = db.Conn.Query(query, e.Username, generatedHash, e.Location)
 	if err != nil {
-		return structs.HashedInfo{}, err
+		return structs.HashedInfo{}, errors.New("error occured when adding new user :" + err.Error())
 	}
 
 	return structs.HashedInfo{
@@ -129,6 +145,12 @@ func (db *EventsDBRepository) Add(e structs.Event) (structs.Event, error) {
 	if err != nil {
 		return structs.Event{}, err
 	}
+	//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
+	//call to UTC() does not change actual values, but lets go compiler compare zero time values better
+	res.Start = res.Start.UTC()
+	res.End = res.End.UTC()
+	res.Alert = res.Alert.UTC()
+
 	return res, nil
 }
 
@@ -154,6 +176,12 @@ func (db *EventsDBRepository) Get(p structs.EventParams) ([]structs.Event, error
 		if err != nil {
 			return list, err
 		}
+		//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
+		//call to UTC() does not change actual values, but lets go compiler compare zero time values better
+		item.Start = item.Start.UTC()
+		item.End = item.End.UTC()
+		item.Alert = item.Alert.UTC()
+
 		list = append(list, item)
 	}
 	return list, nil
@@ -168,10 +196,17 @@ func (db *EventsDBRepository) GetByID(id int) (structs.Event, error) {
 	err := db.Conn.QueryRow(justAdded, id).Scan(&item.Id, &item.Name, &item.Start, &item.End, &item.Description, &item.Alert)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return structs.Event{}, ErrNoMatch
+			message := "event with id [" + fmt.Sprint(id) + "] does not exist"
+			return structs.Event{}, errors.New(message)
 		}
 		return structs.Event{}, err
 	}
+	//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
+	//call to UTC() does not change actual values, but lets go compiler compare zero time values better
+	item.Start = item.Start.UTC()
+	item.End = item.End.UTC()
+	item.Alert = item.Alert.UTC()
+	// fmt.Println("item start time in sql : " + item.Start.String())
 	return item, nil
 }
 
@@ -184,10 +219,17 @@ func (db *EventsDBRepository) Update(id int, e structs.Event) (updated structs.E
 		Scan(&event.Id, &event.Name, &event.Start, &event.End, &event.Description, &event.Alert)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return event, ErrNoMatch
+			message := "event with id [" + fmt.Sprint(id) + "] does not exist"
+			return structs.Event{}, errors.New(message)
 		}
 		return event, err
+
 	}
+	//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
+	//call to UTC() does not change actual values, but lets go compiler compare zero time values better
+	event.Start = event.Start.UTC()
+	event.End = event.End.UTC()
+	event.Alert = event.Alert.UTC()
 	return event, nil
 }
 
@@ -242,6 +284,13 @@ func NewArrayRepository() (*ArrayRepository, error) {
 		ArrayId:   1,
 	}
 	return repo, nil
+}
+
+func (m *ArrayRepository) ClearRepoData() error {
+	m.ArrayRepo = nil
+	var events []*structs.Event
+	m.ArrayRepo = events
+	return nil
 }
 
 func (a *ArrayRepository) Get(p structs.EventParams) ([]structs.Event, error) {
@@ -319,20 +368,24 @@ func (a *ArrayRepository) GetLastUsedId() int {
 
 // Implementation of Repository based on map.
 type MapRepository struct {
-	MapRepo  map[int]structs.Event
-	MapId    int
-	MapUsers map[string]*structs.HashedInfo
+	MapRepo map[int]structs.Event
+	MapId   int
 }
 
 func NewMapRepository() (*MapRepository, error) {
 	events := make(map[int]structs.Event)
-	// hashed := make(map[string]*structs.HashedInfo)
 	repo := &MapRepository{
 		MapRepo: events,
 		MapId:   1,
-		// MapUsers: hashed,
 	}
 	return repo, nil
+}
+
+func (m *MapRepository) ClearRepoData() error {
+	for k := range m.MapRepo {
+		delete(m.MapRepo, k)
+	}
+	return nil
 }
 
 func (m *MapRepository) Get(p structs.EventParams) ([]structs.Event, error) {
@@ -407,6 +460,13 @@ func (m *MapRepository) GetLastUsedId() int {
 
 type UsersRepository struct {
 	Users map[string]structs.HashedInfo
+}
+
+func (u *UsersRepository) ClearRepoData() error {
+	for k := range u.Users {
+		delete(u.Users, k)
+	}
+	return nil
 }
 
 func NewUsersInMemoryRepository() (*UsersRepository, error) {

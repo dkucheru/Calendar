@@ -25,6 +25,7 @@ func (s *eventService) AddEvent(loc time.Location, newEvent structs.Event) (stru
 	if !approved {
 		return structs.Event{}, err
 	}
+	// log.Println("UTC ??? " + newEvent.Start.String())
 	returnedEvent, err := s.repository.Add(newEvent)
 	if err != nil {
 		return structs.Event{}, err
@@ -54,6 +55,7 @@ func (s *eventService) GetById(id int, loc time.Location) (structs.Event, error)
 	if err != nil {
 		return structs.Event{}, err
 	}
+	// fmt.Println("returned start time before appliyng location : " + returnedEvent.Start.String())
 	returnedEvent.Start = returnedEvent.Start.In(&loc)
 	returnedEvent.End = returnedEvent.End.In(&loc)
 	if returnedEvent.Alert != (time.Time{}) {

@@ -12,7 +12,7 @@ import (
 
 type Rest struct {
 	address  string
-	mux      *mux.Router
+	Mux      *mux.Router
 	listener net.Listener
 	service  *service.Service
 }
@@ -32,7 +32,7 @@ func New(address string, service *service.Service) *Rest {
 	api.Handle("/events/{id}", rest.BasicAuthMiddleware(http.HandlerFunc(rest.deleteEvent))).Methods("DELETE")
 	api.Handle("/events/{id}", rest.BasicAuthMiddleware(http.HandlerFunc(rest.updateEvent))).Methods("PUT")
 
-	rest.mux = api
+	rest.Mux = api
 
 	return rest
 }
@@ -59,7 +59,7 @@ func (rest *Rest) Listen() (err error) {
 	}
 
 	r := http.NewServeMux()
-	r.Handle("/", rest.mux)
+	r.Handle("/", rest.Mux)
 	server := &http.Server{
 		Handler: r,
 	}
@@ -70,7 +70,7 @@ func (rest *Rest) Listen() (err error) {
 }
 
 func (rest *Rest) setupMiddleware() {
-	rest.mux.Use(func(handler http.Handler) http.Handler {
+	rest.Mux.Use(func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Println("new request", r.RequestURI)
 			handler.ServeHTTP(w, r)

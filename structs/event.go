@@ -3,6 +3,7 @@ package structs
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -44,13 +45,16 @@ func CompareTwoEvents(f Event, s Event) bool {
 	if f.Description != s.Description {
 		return false
 	}
-	if f.Start.Unix() != s.Start.Unix() {
+	if math.Abs(float64(f.Start.Unix()-s.Start.Unix())) >= time.Minute.Seconds() {
+		// fmt.Printf("diff between two starts is over a minute : %v\n", math.Abs(float64(f.Start.Unix()-s.Start.Unix())))
+		// fmt.Println("first start time : " + f.Start.String())
+		// fmt.Println("second start time : " + s.Start.String())
 		return false
 	}
-	if f.End.Unix() != s.End.Unix() {
+	if math.Abs(float64(f.End.Unix()-s.End.Unix())) >= time.Minute.Seconds() {
 		return false
 	}
-	if f.Alert.Unix() != s.Alert.Unix() {
+	if math.Abs(float64(f.Alert.Unix()-s.Alert.Unix())) >= time.Minute.Seconds() {
 		return false
 	}
 	return true
@@ -62,6 +66,46 @@ type EventCreation struct {
 	End         time.Time `json:"end" validate:"required"`
 	Description string    `json:"description"`
 	Alert       time.Time `json:"alert"`
+}
+
+func SuitsParams(p EventParams, e Event) bool {
+	if p.Day != 0 {
+		if e.Start.Day() != p.Day {
+			return false
+		}
+	}
+	if p.Week != 0 {
+		_, week := e.Start.ISOWeek()
+		if week != p.Week {
+			return false
+		}
+	}
+	if p.Month != 0 {
+		if int(e.Start.Month()) != p.Month {
+			return false
+		}
+	}
+	if p.Year != 0 {
+		if e.Start.Year() != p.Year {
+			return false
+		}
+	}
+	if p.Name != "" {
+		if e.Name != p.Name {
+			return false
+		}
+	}
+	if p.Start != (time.Time{}) {
+		if e.Start != p.Start {
+			return false
+		}
+	}
+	if p.End != (time.Time{}) {
+		if e.End != p.End {
+			return false
+		}
+	}
+	return true
 }
 
 func CreateEvent(loc time.Location, newEvent EventCreation) (Event, error) {
@@ -79,12 +123,12 @@ func CreateEvent(loc time.Location, newEvent EventCreation) (Event, error) {
 	a := newEvent.Alert
 
 	t := time.Date(st.Year(), st.Month(), st.Day(), st.Hour(), st.Minute(), st.Second(), st.Nanosecond(), &loc)
-	newEvent.Start = t.UTC()
+	newEvent.Start = t.In(time.UTC)
 	t = time.Date(end.Year(), end.Month(), end.Day(), end.Hour(), end.Minute(), end.Second(), end.Nanosecond(), &loc)
-	newEvent.End = t.UTC()
+	newEvent.End = t.In(time.UTC)
 	if newEvent.Alert != (time.Time{}) {
 		t = time.Date(a.Year(), a.Month(), a.Day(), a.Hour(), a.Minute(), a.Second(), a.Nanosecond(), &loc)
-		newEvent.Alert = t.UTC()
+		newEvent.Alert = t.In(time.UTC)
 	}
 
 	return Event{

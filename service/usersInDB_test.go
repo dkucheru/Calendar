@@ -1,7 +1,6 @@
 package service
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -9,22 +8,9 @@ import (
 	"github.com/dkucheru/Calendar/structs"
 )
 
-func AddUser(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	var testRepo, _ = db.NewUsersDBRepository(repo)
+func AddUserInDB(t *testing.T) {
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {
 		user         structs.CreateUser
@@ -74,21 +60,9 @@ func AddUser(t *testing.T) {
 	}
 }
 
-func UpdateUserTimezoneInDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	var testRepo, _ = db.NewUsersDBRepository(repo)
+func UpdateUserTimezone(t *testing.T) {
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {
 		user         string
@@ -129,21 +103,9 @@ func UpdateUserTimezoneInDB(t *testing.T) {
 
 }
 
-func CheckPasswordFromDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	var testRepo, _ = db.NewUsersDBRepository(repo)
+func CheckPassword(t *testing.T) {
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {
 		user         string
@@ -178,21 +140,9 @@ func CheckPasswordFromDB(t *testing.T) {
 	}
 }
 
-func GetUserLocationFromDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	var testRepo, _ = db.NewUsersDBRepository(repo)
+func GetUserLocation(t *testing.T) {
+	var testRepo, _ = db.NewUsersInMemoryRepository()
 	var testService = newUsersService(testRepo)
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	err = testRepo.ClearRepoData()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
 	testService.AddUser(structs.CreateUser{Username: "testUserExists", Password: "o!", Location: "Local"})
 	testCases := map[string]struct {
 		user         string

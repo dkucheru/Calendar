@@ -35,7 +35,7 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := r.URL.Query()
-	params, err := loadParameters(query)
+	params, err := LoadParameters(query)
 	if err != nil {
 		rest.sendError(w, http.StatusBadRequest, err)
 		return
@@ -49,11 +49,9 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 	for _, event := range events {
 		json.NewEncoder(w).Encode(event)
 	}
-
-	rest.sendData(w, "Everything is fine")
 }
 
-func loadParameters(query url.Values) (structs.EventParams, error) {
+func LoadParameters(query url.Values) (structs.EventParams, error) {
 	params := structs.EventParams{}
 	params.Name = query.Get("name")
 	if sort := query.Get("sorting"); sort != "" {
