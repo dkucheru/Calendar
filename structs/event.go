@@ -3,7 +3,6 @@ package structs
 import (
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -45,16 +44,13 @@ func CompareTwoEvents(f Event, s Event) bool {
 	if f.Description != s.Description {
 		return false
 	}
-	if math.Abs(float64(f.Start.Unix()-s.Start.Unix())) >= time.Minute.Seconds() {
-		// fmt.Printf("diff between two starts is over a minute : %v\n", math.Abs(float64(f.Start.Unix()-s.Start.Unix())))
-		// fmt.Println("first start time : " + f.Start.String())
-		// fmt.Println("second start time : " + s.Start.String())
+	if f.Start.Unix() != s.Start.Unix() {
 		return false
 	}
-	if math.Abs(float64(f.End.Unix()-s.End.Unix())) >= time.Minute.Seconds() {
+	if f.End.Unix() != s.End.Unix() {
 		return false
 	}
-	if math.Abs(float64(f.Alert.Unix()-s.Alert.Unix())) >= time.Minute.Seconds() {
+	if f.Alert.Unix() != s.Alert.Unix() {
 		return false
 	}
 	return true

@@ -1,18 +1,26 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/dkucheru/Calendar/service"
 	"github.com/gorilla/mux"
 )
 
+var CheckSignals chan os.Signal
+
 type Rest struct {
 	address  string
-	Mux      *mux.Router
+	mux      *mux.Router
 	listener net.Listener
 	service  *service.Service
 }
@@ -32,7 +40,7 @@ func New(address string, service *service.Service) *Rest {
 	api.Handle("/events/{id}", rest.BasicAuthMiddleware(http.HandlerFunc(rest.deleteEvent))).Methods("DELETE")
 	api.Handle("/events/{id}", rest.BasicAuthMiddleware(http.HandlerFunc(rest.updateEvent))).Methods("PUT")
 
-	rest.Mux = api
+	rest.mux = api
 
 	return rest
 }
@@ -59,18 +67,36 @@ func (rest *Rest) Listen() (err error) {
 	}
 
 	r := http.NewServeMux()
-	r.Handle("/", rest.Mux)
+	r.Handle("/", rest.mux)
 	server := &http.Server{
 		Handler: r,
 	}
 
 	rest.setupMiddleware()
+	go func() {
+		server.Serve(rest.listener)
+	}()
+	defer Stop(server)
+	log.Printf("Started server on %s", rest.address)
+	CheckSignals = make(chan os.Signal, 1)
+	signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	log.Println(fmt.Sprint(<-CheckSignals))
+	log.Println("Stopping API server.")
 
-	return server.Serve(rest.listener)
+	return err
+}
+
+func Stop(server *http.Server) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Could not shut down server correctly: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func (rest *Rest) setupMiddleware() {
-	rest.Mux.Use(func(handler http.Handler) http.Handler {
+	rest.mux.Use(func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Println("new request", r.RequestURI)
 			handler.ServeHTTP(w, r)

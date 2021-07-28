@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -11,36 +11,71 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/dkucheru/Calendar/structs"
+	migrate "github.com/rubenv/sql-migrate"
 	"golang.org/x/crypto/bcrypt"
 )
 
+var migrateDown = flag.Bool("down", false, "call to sql-migrate down")
+
 func Initialize(dsn string) (*sql.DB, error) {
-	// fmt.Println(dsn)
 	conn, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w : %v", structs.ErrSql, err.Error())
 	}
 	err = conn.Ping()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w : %v", structs.ErrSql, err.Error())
 	}
 	log.Println("Database connection established")
+
+	// migrations := &migrate.FileMigrationSource{
+	// 	Dir: "./migrations/",
+	// }
+	// migrations := &migrate.PackrMigrationSource{
+	// 	Box: packr.New
+	// }
+	// migrations := &migrate.PackrMigrationSource{
+	// 	Box: packr.New("migrations", "./migrations"),
+	// }
+	migrations := &migrate.AssetMigrationSource{
+		Asset:    Asset,
+		AssetDir: AssetDir,
+		Dir:      "../migrations",
+	}
+	var n int
+	if *migrateDown {
+		log.Println("--down set to true")
+		n, err = migrate.Exec(conn, "postgres", migrations, migrate.Down)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		log.Println("--down not set")
+		n, err = migrate.Exec(conn, "postgres", migrations, migrate.Up)
+		if err != nil {
+			return nil, err
+		}
+	}
+	fmt.Printf("Applied %d migrations!\n", n)
+
 	return conn, nil
 }
 
 func (db *UsersDBRepository) ClearRepoData() error {
-	_, err := db.Conn.Query("TRUNCATE users;")
+	rows, err := db.Conn.Query("TRUNCATE users;")
 	if err != nil {
-		return errors.New("error occured when truncating all tables :" + err.Error())
+		return fmt.Errorf("%w :\n\t\t error occured when truncating users table : %v", structs.ErrPostgres, err.Error())
 	}
+	defer rows.Close()
 	return nil
 }
 
 func (db *EventsDBRepository) ClearRepoData() error {
-	_, err := db.Conn.Query("TRUNCATE events RESTART IDENTITY;")
+	rows, err := db.Conn.Query("TRUNCATE events RESTART IDENTITY;")
 	if err != nil {
-		return errors.New("error occured when truncating all tables :" + err.Error())
+		return fmt.Errorf("%w :\n\t\t error occured when truncating events table : %v", structs.ErrPostgres, err.Error())
 	}
+	defer rows.Close()
 	return nil
 }
 
@@ -62,11 +97,12 @@ func (db *UsersDBRepository) AddUser(e structs.CreateUser) (structs.HashedInfo, 
 		return structs.HashedInfo{}, err
 	}
 	query := `INSERT INTO users (username, hashedpass, userlocation) VALUES ($1, $2, $3);`
-	_, err = db.Conn.Query(query, e.Username, generatedHash, e.Location)
+	rows, err := db.Conn.Query(query, e.Username, generatedHash, e.Location)
 	if err != nil {
-		return structs.HashedInfo{}, errors.New("error occured when adding new user :" + err.Error())
+		return structs.HashedInfo{},
+			fmt.Errorf("%w :\n\t\t error occured when adding new user : %v", structs.ErrPostgres, err.Error())
 	}
-
+	defer rows.Close()
 	return structs.HashedInfo{
 		Username:   e.Username,
 		Location:   *loc,
@@ -83,13 +119,11 @@ func (db *UsersDBRepository) GetUser(user string) (structs.HashedInfo, error) {
 	err := db.Conn.QueryRow(justAdded, user).Scan(&item.Username, &item.Password, &item.Location)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return structs.HashedInfo{}, ErrNoMatch
+			return structs.HashedInfo{}, fmt.Errorf("%w : %v", structs.ErrNoMatch, err.Error())
 		}
-		return structs.HashedInfo{}, err
+		return structs.HashedInfo{}, fmt.Errorf("%w : %v", structs.ErrPostgres, err.Error())
 	}
-	if err != nil {
-		return structs.HashedInfo{}, err
-	}
+
 	loc, err := time.LoadLocation(item.Location)
 	if err != nil {
 		return structs.HashedInfo{}, err
@@ -110,9 +144,10 @@ func (db *UsersDBRepository) UpdateLocation(user string, loc time.Location) (str
 		Scan(&event.Username, &event.Password, &event.Location)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return structs.HashedInfo{}, ErrNoMatch
+			message := "user with username [" + fmt.Sprint(user) + "] does not exist"
+			return structs.HashedInfo{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 		}
-		return structs.HashedInfo{}, err
+		return structs.HashedInfo{}, fmt.Errorf("%w : %v ", structs.ErrPostgres, err.Error())
 	}
 	newloc, err := time.LoadLocation(event.Location)
 	if err != nil {
@@ -130,8 +165,6 @@ type EventsDBRepository struct {
 	Conn *sql.DB
 }
 
-var ErrNoMatch = fmt.Errorf("no matching record")
-
 func NewDatabaseRepository(conn *sql.DB) (*EventsDBRepository, error) {
 	return &EventsDBRepository{Conn: conn}, nil
 }
@@ -143,7 +176,7 @@ func (db *EventsDBRepository) Add(e structs.Event) (structs.Event, error) {
 	err := db.Conn.QueryRow(query, e.Name, e.Start, e.End, e.Description, e.Alert).
 		Scan(&res.Id, &res.Name, &res.Start, &res.End, &res.Description, &res.Alert)
 	if err != nil {
-		return structs.Event{}, err
+		return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrPostgres, err.Error())
 	}
 	//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
 	//call to UTC() does not change actual values, but lets go compiler compare zero time values better
@@ -168,13 +201,14 @@ func (db *EventsDBRepository) Get(p structs.EventParams) ([]structs.Event, error
 	rows, err := db.Conn.Query(query, p.Name, p.Day, p.Week, p.Month, p.Year, p.Start, p.End)
 	var list []structs.Event
 	if err != nil {
-		return list, err
+		return list, fmt.Errorf("%w : %v ", structs.ErrPostgres, err.Error())
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var item structs.Event
 		err := rows.Scan(&item.Id, &item.Name, &item.Start, &item.End, &item.Description, &item.Alert)
 		if err != nil {
-			return list, err
+			return list, fmt.Errorf("%w : %v ", structs.ErrSql, err.Error())
 		}
 		//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
 		//call to UTC() does not change actual values, but lets go compiler compare zero time values better
@@ -197,16 +231,15 @@ func (db *EventsDBRepository) GetByID(id int) (structs.Event, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-			return structs.Event{}, errors.New(message)
+			return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 		}
-		return structs.Event{}, err
+		return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrPostgres, err.Error())
 	}
 	//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
 	//call to UTC() does not change actual values, but lets go compiler compare zero time values better
 	item.Start = item.Start.UTC()
 	item.End = item.End.UTC()
 	item.Alert = item.Alert.UTC()
-	// fmt.Println("item start time in sql : " + item.Start.String())
 	return item, nil
 }
 
@@ -220,9 +253,9 @@ func (db *EventsDBRepository) Update(id int, e structs.Event) (updated structs.E
 	if err != nil {
 		if err == sql.ErrNoRows {
 			message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-			return structs.Event{}, errors.New(message)
+			return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 		}
-		return event, err
+		return event, fmt.Errorf("%w : %v ", structs.ErrPostgres, err.Error())
 
 	}
 	//these are necessary due to sql Scan function returning time with +0000 zone rather than UTC
@@ -238,9 +271,13 @@ func (db *EventsDBRepository) Delete(e structs.Event) error {
 	_, err := db.Conn.Exec(query, e.Id)
 	switch err {
 	case sql.ErrNoRows:
-		return ErrNoMatch
+		message := "event with id [" + fmt.Sprint(e.Id) + "] does not exist"
+		return fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 	default:
-		return err
+		if err != nil {
+			return fmt.Errorf("%w : %v ", structs.ErrPostgres, err.Error())
+		}
+		return nil
 	}
 }
 
@@ -325,7 +362,7 @@ func (a *ArrayRepository) Update(id int, newEvent structs.Event) (updated struct
 	}
 	if foundEvent == nil {
 		message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-		return structs.Event{}, errors.New(message)
+		return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 	}
 	foundEvent.Name = newEvent.Name
 	foundEvent.Start = newEvent.Start
@@ -342,7 +379,7 @@ func (a *ArrayRepository) GetByID(id int) (structs.Event, error) {
 		}
 	}
 	message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-	return structs.Event{}, errors.New(message)
+	return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 }
 
 func (a *ArrayRepository) Add(e structs.Event) (structs.Event, error) {
@@ -359,7 +396,8 @@ func (a *ArrayRepository) Delete(e structs.Event) error {
 			return nil
 		}
 	}
-	return errors.New("not found")
+	message := "event with id [" + fmt.Sprint(e.Id) + "] does not exist"
+	return fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 }
 
 func (a *ArrayRepository) GetLastUsedId() int {
@@ -418,7 +456,7 @@ func (m *MapRepository) GetByID(id int) (structs.Event, error) {
 	foundEvent, ok := m.MapRepo[id]
 	if !ok {
 		message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-		return structs.Event{}, errors.New(message)
+		return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 	}
 	return foundEvent, nil
 }
@@ -427,7 +465,7 @@ func (m *MapRepository) Update(id int, newEvent structs.Event) (updated structs.
 	foundEvent, ok := m.MapRepo[id]
 	if !ok {
 		message := "event with id [" + fmt.Sprint(id) + "] does not exist"
-		return structs.Event{}, errors.New(message)
+		return structs.Event{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 	}
 
 	foundEvent.Name = newEvent.Name
@@ -481,7 +519,7 @@ func (u *UsersRepository) AddUser(e structs.CreateUser) (structs.HashedInfo, err
 	_, ok := u.Users[e.Username]
 	if ok {
 		message := "user with username [" + e.Username + "] already exists"
-		return structs.HashedInfo{}, errors.New(message)
+		return structs.HashedInfo{}, fmt.Errorf("%w : %v ", structs.ErrDublicate, message)
 	}
 	generatedHash, err := generate(e.Password)
 	if err != nil {
@@ -505,7 +543,8 @@ func (u *UsersRepository) AddUser(e structs.CreateUser) (structs.HashedInfo, err
 func (u *UsersRepository) GetUser(username string) (structs.HashedInfo, error) {
 	_, ok := u.Users[username]
 	if !ok {
-		return structs.HashedInfo{}, errors.New("user does not exist")
+		message := "user with username [" + username + "] does not exist"
+		return structs.HashedInfo{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 	}
 	return u.Users[username], nil
 }
@@ -513,7 +552,8 @@ func (u *UsersRepository) GetUser(username string) (structs.HashedInfo, error) {
 func (u *UsersRepository) UpdateLocation(user string, loc time.Location) (structs.HashedInfo, error) {
 	found, ok := u.Users[user]
 	if !ok {
-		return structs.HashedInfo{}, errors.New("user does not exist")
+		message := "user with username [" + user + "] does not exist"
+		return structs.HashedInfo{}, fmt.Errorf("%w : %v ", structs.ErrNoMatch, message)
 	}
 	found.Location = loc
 	u.Users[user] = found

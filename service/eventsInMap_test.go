@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -395,8 +396,7 @@ func TestDeleteEventOnMap(t *testing.T) {
 
 			_, err2 := testService.GetById(test.id, *time.Local)
 
-			message := "event with id [" + fmt.Sprint(test.id) + "] does not exist"
-			if err2.Error() != message && err == nil {
+			if !errors.Is(err2, structs.ErrNoMatch) && err == nil {
 				t.Errorf("event with id [" + fmt.Sprint(test.id) + "] was not deleted")
 			}
 		})

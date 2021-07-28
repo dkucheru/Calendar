@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -46,9 +47,22 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
-	for _, event := range events {
-		json.NewEncoder(w).Encode(event)
+	if len(events) > 0 {
+		eventsJSON, err := json.Marshal(events)
+		if err != nil {
+			rest.sendError(w, http.StatusInternalServerError, err)
+			return
+		}
+		_, err = w.Write(eventsJSON)
+		if err != nil {
+			rest.sendError(w, http.StatusInternalServerError, err)
+			return
+		}
+	} else {
+		w.Write([]byte("No events found"))
+		return
 	}
+
 }
 
 func LoadParameters(query url.Values) (structs.EventParams, error) {
@@ -83,7 +97,7 @@ func LoadParameters(query url.Values) (structs.EventParams, error) {
 			if isNum[paramName] {
 				newInt, err := strconv.Atoi(url)
 				if err != nil {
-					return structs.EventParams{}, err
+					return structs.EventParams{}, errors.New("error parsing date part value")
 				}
 				switch paramName {
 				case day:

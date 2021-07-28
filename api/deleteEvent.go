@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/dkucheru/Calendar/structs"
 	"github.com/gorilla/mux"
 )
 
@@ -23,6 +24,10 @@ func (rest *Rest) deleteEvent(w http.ResponseWriter, r *http.Request) {
 	user, _, _ := r.BasicAuth()
 	err = rest.service.Events.DeleteEvent(id, user)
 	if err != nil {
+		if errors.Is(err, structs.ErrNoMatch) {
+			rest.sendError(w, http.StatusNotFound, err)
+			return
+		}
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}

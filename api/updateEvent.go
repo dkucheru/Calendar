@@ -45,6 +45,10 @@ func (rest *Rest) updateEvent(w http.ResponseWriter, r *http.Request) {
 
 	updatedEvent, err := rest.service.Events.UpdateEvent(id, event, loc)
 	if err != nil {
+		if errors.Is(err, structs.ErrNoMatch) {
+			rest.sendError(w, http.StatusNotFound, err)
+			return
+		}
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}

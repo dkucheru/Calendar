@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dkucheru/Calendar/db"
+
 	"github.com/dkucheru/Calendar/structs"
 )
 

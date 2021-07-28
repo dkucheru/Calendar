@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dkucheru/Calendar/structs"
 	"github.com/gorilla/mux"
 )
 
@@ -28,9 +29,13 @@ func (rest *Rest) changeTimezone(w http.ResponseWriter, r *http.Request) {
 
 	newLocation, err := rest.service.Users.UpdateLocation(username, *loc)
 	if err != nil {
+		if errors.Is(err, structs.ErrNoMatch) {
+			rest.sendError(w, http.StatusNotFound, err)
+			return
+		}
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	rest.sendData(w, newLocation)
+	rest.sendData(w, newLocation.Location.String())
 }
