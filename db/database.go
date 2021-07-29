@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -15,9 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var migrateDown = flag.Bool("down", false, "call to sql-migrate down")
-
-func Initialize(dsn string) (*sql.DB, error) {
+func Initialize(dsn string, migrateDown bool) (*sql.DB, error) {
 	conn, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("%w : %v", structs.ErrSql, err.Error())
@@ -28,22 +25,13 @@ func Initialize(dsn string) (*sql.DB, error) {
 	}
 	log.Println("Database connection established")
 
-	// migrations := &migrate.FileMigrationSource{
-	// 	Dir: "./migrations/",
-	// }
-	// migrations := &migrate.PackrMigrationSource{
-	// 	Box: packr.New
-	// }
-	// migrations := &migrate.PackrMigrationSource{
-	// 	Box: packr.New("migrations", "./migrations"),
-	// }
 	migrations := &migrate.AssetMigrationSource{
 		Asset:    Asset,
 		AssetDir: AssetDir,
 		Dir:      "../migrations",
 	}
 	var n int
-	if *migrateDown {
+	if migrateDown {
 		log.Println("--down set to true")
 		n, err = migrate.Exec(conn, "postgres", migrations, migrate.Down)
 		if err != nil {
@@ -64,7 +52,7 @@ func Initialize(dsn string) (*sql.DB, error) {
 func (db *UsersDBRepository) ClearRepoData() error {
 	rows, err := db.Conn.Query("TRUNCATE users;")
 	if err != nil {
-		return fmt.Errorf("%w :\n\t\t error occured when truncating users table : %v", structs.ErrPostgres, err.Error())
+		return fmt.Errorf("%w : error occured when truncating users table : %v", structs.ErrPostgres, err.Error())
 	}
 	defer rows.Close()
 	return nil
@@ -73,7 +61,7 @@ func (db *UsersDBRepository) ClearRepoData() error {
 func (db *EventsDBRepository) ClearRepoData() error {
 	rows, err := db.Conn.Query("TRUNCATE events RESTART IDENTITY;")
 	if err != nil {
-		return fmt.Errorf("%w :\n\t\t error occured when truncating events table : %v", structs.ErrPostgres, err.Error())
+		return fmt.Errorf("%w : error occured when truncating events table : %v", structs.ErrPostgres, err.Error())
 	}
 	defer rows.Close()
 	return nil
@@ -100,7 +88,7 @@ func (db *UsersDBRepository) AddUser(e structs.CreateUser) (structs.HashedInfo, 
 	rows, err := db.Conn.Query(query, e.Username, generatedHash, e.Location)
 	if err != nil {
 		return structs.HashedInfo{},
-			fmt.Errorf("%w :\n\t\t error occured when adding new user : %v", structs.ErrPostgres, err.Error())
+			fmt.Errorf("%w : error occured when adding new user : %v", structs.ErrPostgres, err.Error())
 	}
 	defer rows.Close()
 	return structs.HashedInfo{

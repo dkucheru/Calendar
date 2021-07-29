@@ -11,7 +11,8 @@ import (
 )
 
 func AddUser(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -76,7 +77,8 @@ func AddUser(t *testing.T) {
 }
 
 func UpdateUserTimezoneInDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -131,7 +133,8 @@ func UpdateUserTimezoneInDB(t *testing.T) {
 }
 
 func CheckPasswordFromDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -180,7 +183,8 @@ func CheckPasswordFromDB(t *testing.T) {
 }
 
 func GetUserLocationFromDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

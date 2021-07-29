@@ -15,11 +15,11 @@ type App struct {
 	Api        *api.Rest
 }
 
-func New() (*App, error) {
+func New(downMigrateFlag bool) (*App, error) {
 	var err error
 	app := &App{}
 
-	database, err := db.Initialize(os.Getenv("DSN"))
+	database, err := db.Initialize(os.Getenv("DSN"), downMigrateFlag)
 	if err != nil {
 		return nil, err
 	}
@@ -41,4 +41,8 @@ func New() (*App, error) {
 
 func (a *App) Run() error {
 	return a.Api.Listen()
+}
+
+func (a *App) Stop() {
+	a.Api.Stop()
 }

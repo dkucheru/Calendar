@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"testing"
 	"time"
 
@@ -38,7 +41,7 @@ func TestAddingUserIntegration(t *testing.T) {
 				"location": "Local"
 			 }`),
 			500,
-			`{"Status":500,"Data":"postgres error :\n\t\t error occured when adding new user : pq: duplicate key value violates unique constraint \"users_pkey\""}`,
+			`{"Status":500,"Data":"postgres error : error occured when adding new user : pq: duplicate key value violates unique constraint \"users_pkey\""}`,
 		},
 		"No location": {
 			[]byte(`{
@@ -59,20 +62,28 @@ func TestAddingUserIntegration(t *testing.T) {
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			app, err := New()
+			downMigrate := false
+			app, err := New(downMigrate)
 			if err != nil {
 				t.Errorf("error launching app : " + err.Error())
 				return
 			}
-
 			go func() {
 				err = app.Run()
 				if err != nil {
-					t.Errorf(err.Error())
-					return
+					log.Println(err.Error())
 				}
+				return
 			}()
-
+			log.Printf("Started server")
+			CheckSignals := make(chan os.Signal, 1)
+			signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				log.Println(fmt.Sprint(<-CheckSignals))
+				log.Println("Stopping API server.")
+				app.Stop()
+				close(CheckSignals)
+			}()
 			err = app.EventsRepo.ClearRepoData()
 			if err != nil {
 				t.Errorf(err.Error())
@@ -92,23 +103,23 @@ func TestAddingUserIntegration(t *testing.T) {
 			response, err := client.Post("http://localhost:8080/users", "application/json", bytes.NewBuffer(test.jsonInput))
 			if err != nil {
 				t.Errorf("Error %s", err)
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			body, err := ioutil.ReadAll(response.Body)
 			if test.response != string(body) {
 				t.Errorf("\n Wanted response : %s \n Got response : %s", test.response, string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			if getUserErr == nil && response.StatusCode == http.StatusOK {
 				t.Errorf("added user with the same username as another user in DB")
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			if getUserErr != nil && errors.Is(getUserErr, structs.ErrNoMatch) && response.StatusCode != test.codeExpect {
 				t.Errorf("unexpected response code ; response :" + string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			response.Body.Close()
-			api.CheckSignals <- os.Interrupt
+			CheckSignals <- os.Interrupt
 		})
 	}
 }
@@ -193,7 +204,9 @@ func TestAddingEventIntegration(t *testing.T) {
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
 			//preset
-			app, err := New()
+
+			downMigrate := false
+			app, err := New(downMigrate)
 			if err != nil {
 				t.Errorf("error launching app : " + err.Error())
 				return
@@ -201,9 +214,18 @@ func TestAddingEventIntegration(t *testing.T) {
 			go func() {
 				err = app.Run()
 				if err != nil {
-					t.Errorf(err.Error())
-					return
+					log.Println(err.Error())
 				}
+				return
+			}()
+			log.Printf("Started server")
+			CheckSignals := make(chan os.Signal, 1)
+			signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				log.Println(fmt.Sprint(<-CheckSignals))
+				log.Println("Stopping API server.")
+				app.Stop()
+				close(CheckSignals)
 			}()
 			err = app.EventsRepo.ClearRepoData()
 			if err != nil {
@@ -224,36 +246,46 @@ func TestAddingEventIntegration(t *testing.T) {
 			req.SetBasicAuth("test", "12345678")
 			if err != nil {
 				t.Errorf("error occured when sending http request to add event : " + err.Error())
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
 			}
 
 			response, err := client.Do(req)
 			if err != nil {
 				t.Errorf("error occured when sending http request to add event : " + err.Error())
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
 			}
 			defer response.Body.Close()
 
 			//check
 			if err != nil {
 				t.Errorf("error occured when adding event")
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
+
 			}
 			if err == nil && response.StatusCode != test.codeExpect {
 				t.Errorf("unexpected response code ; response code : %v", response.StatusCode)
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
+
 			}
 
 			body, err := ioutil.ReadAll(response.Body)
 			if test.response != string(body) {
 				t.Errorf("\n Wanted response : %s \n Got response : %s", test.response, string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
+
 			}
 
 			apiResp := api.Response{}
 			if err = json.Unmarshal([]byte(body), &apiResp); err != nil {
 				t.Errorf("error unmarshalling response body : " + err.Error() + "\n body : " + string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
+
 			}
 			var respEvent structs.Event
 			if err == nil && response.StatusCode == http.StatusOK {
@@ -279,10 +311,12 @@ func TestAddingEventIntegration(t *testing.T) {
 				}
 			}
 			response.Body.Close()
-			api.CheckSignals <- os.Interrupt
+			CheckSignals <- os.Interrupt
+			return
 		})
 	}
 }
+
 func TestChangingUserLocationIntegration(t *testing.T) {
 	testCases := map[string]struct {
 		url        string
@@ -308,16 +342,26 @@ func TestChangingUserLocationIntegration(t *testing.T) {
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
 			//preset
-			app, err := New()
+			downMigrate := false
+			app, err := New(downMigrate)
 			if err != nil {
 				t.Errorf("error launching app : " + err.Error())
 			}
 			go func() {
 				err = app.Run()
 				if err != nil {
-					t.Errorf(err.Error())
-					return
+					log.Println(err.Error())
 				}
+				return
+			}()
+			log.Printf("Started server")
+			CheckSignals := make(chan os.Signal, 1)
+			signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				log.Println(fmt.Sprint(<-CheckSignals))
+				log.Println("Stopping API server.")
+				app.Stop()
+				close(CheckSignals)
 			}()
 			err = app.EventsRepo.ClearRepoData()
 			if err != nil {
@@ -344,23 +388,28 @@ func TestChangingUserLocationIntegration(t *testing.T) {
 			response, err := client.Do(req)
 			if err != nil {
 				t.Errorf("error occured when changinf user location via http request : " + err.Error())
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
 			}
 			if err == nil && response.StatusCode != test.codeExpect {
 				t.Errorf("unexpected response code ; status : " + fmt.Sprint(response.StatusCode))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
 			}
 
 			body, err := ioutil.ReadAll(response.Body)
 			if string(body) != test.response {
 				t.Errorf("\n Wanted response : %s \n Got response : %s", test.response, string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
+				return
 			}
 			response.Body.Close()
-			api.CheckSignals <- os.Interrupt
+			CheckSignals <- os.Interrupt
+			return
 		})
 	}
 }
+
 func TestDeleteEventIntegration(t *testing.T) {
 	testCases := map[string]struct {
 		url        string
@@ -386,16 +435,26 @@ func TestDeleteEventIntegration(t *testing.T) {
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
 			//preset
-			app, err := New()
+			downMigrate := false
+			app, err := New(downMigrate)
 			if err != nil {
 				t.Errorf("error launching app : " + err.Error())
 			}
 			go func() {
 				err = app.Run()
 				if err != nil {
-					t.Errorf(err.Error())
-					return
+					log.Println(err.Error())
 				}
+				return
+			}()
+			log.Printf("Started server")
+			CheckSignals := make(chan os.Signal, 1)
+			signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				log.Println(fmt.Sprint(<-CheckSignals))
+				log.Println("Stopping API server.")
+				app.Stop()
+				close(CheckSignals)
 			}()
 			err = app.EventsRepo.ClearRepoData()
 			if err != nil {
@@ -431,24 +490,25 @@ func TestDeleteEventIntegration(t *testing.T) {
 			response, err := client.Do(req)
 			if err != nil {
 				t.Errorf("error occured when deleting event via http request : " + err.Error())
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 
 			//check
 			if err == nil && response.StatusCode != test.codeExpect {
 				t.Errorf("unexpected response code ; status : " + fmt.Sprint(response.StatusCode))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			body, err := ioutil.ReadAll(response.Body)
 			if test.response != string(body) {
 				t.Errorf("\n Wanted response : %s \n Got response : %s", test.response, string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			response.Body.Close()
-			api.CheckSignals <- os.Interrupt
+			CheckSignals <- os.Interrupt
 		})
 	}
 }
+
 func TestGettingEventsIntegration(t *testing.T) {
 	today := time.Date(2021, 7, 28, 14, 30, 0, 0, time.Local)
 	yesterday := time.Date(2021, 7, 27, 14, 30, 0, 0, time.Local)
@@ -474,7 +534,7 @@ func TestGettingEventsIntegration(t *testing.T) {
 		},
 		"No matching events": {
 			fmt.Sprintf("/events?day=%d&month=%d&year=%d", today.Day()+1, today.Month(), today.Year()),
-			200, `No events found`,
+			200, `[]`,
 		},
 		"Bad date parameters": {
 			"/events?day=today&month=thisMonth&year=current",
@@ -487,16 +547,26 @@ func TestGettingEventsIntegration(t *testing.T) {
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
 			//preset
-			app, err := New()
+			downMigrate := false
+			app, err := New(downMigrate)
 			if err != nil {
 				t.Errorf("error launching app : " + err.Error())
 			}
 			go func() {
 				err = app.Run()
 				if err != nil {
-					t.Errorf(err.Error())
-					return
+					log.Println(err.Error())
 				}
+				return
+			}()
+			log.Printf("Started server")
+			CheckSignals := make(chan os.Signal, 1)
+			signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				log.Println(fmt.Sprint(<-CheckSignals))
+				log.Println("Stopping API server.")
+				app.Stop()
+				close(CheckSignals)
 			}()
 			err = app.EventsRepo.ClearRepoData()
 			if err != nil {
@@ -533,7 +603,7 @@ func TestGettingEventsIntegration(t *testing.T) {
 			response, err := client.Do(req)
 			if err != nil {
 				t.Errorf("Error %s", err)
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 				return
 			}
 			if err != nil && response.StatusCode == http.StatusOK {
@@ -545,11 +615,11 @@ func TestGettingEventsIntegration(t *testing.T) {
 			body, err := ioutil.ReadAll(response.Body)
 			if err != nil {
 				t.Errorf("error reading body : " + err.Error())
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			if test.response != string(body) {
 				t.Errorf("\n Wanted response : %s \n Got response : %s", test.response, string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 
 			if err == nil && response.StatusCode == http.StatusOK && string(body) != "No events found" {
@@ -573,7 +643,7 @@ func TestGettingEventsIntegration(t *testing.T) {
 
 			}
 			response.Body.Close()
-			api.CheckSignals <- os.Interrupt
+			CheckSignals <- os.Interrupt
 		})
 	}
 }
@@ -642,16 +712,26 @@ func TestUpdatingEventIntegration(t *testing.T) {
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
 			//preset
-			app, err := New()
+			downMigrate := false
+			app, err := New(downMigrate)
 			if err != nil {
 				t.Errorf("error launching app : " + err.Error())
 			}
 			go func() {
 				err = app.Run()
 				if err != nil {
-					t.Errorf(err.Error())
-					return
+					log.Println(err.Error())
 				}
+				return
+			}()
+			log.Printf("Started server")
+			CheckSignals := make(chan os.Signal, 1)
+			signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				log.Println(fmt.Sprint(<-CheckSignals))
+				log.Println("Stopping API server.")
+				app.Stop()
+				close(CheckSignals)
 			}()
 			err = app.EventsRepo.ClearRepoData()
 			if err != nil {
@@ -692,11 +772,11 @@ func TestUpdatingEventIntegration(t *testing.T) {
 			body, err := ioutil.ReadAll(response.Body)
 			if err != nil {
 				t.Errorf("error reading body : " + err.Error())
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			if test.response != string(body) {
 				t.Errorf("\n Wanted response : %s \n Got response : %s", test.response, string(body))
-				api.CheckSignals <- os.Interrupt
+				CheckSignals <- os.Interrupt
 			}
 			apiResp := api.Response{}
 			if err = json.Unmarshal(body, &apiResp); err != nil {
@@ -726,7 +806,7 @@ func TestUpdatingEventIntegration(t *testing.T) {
 				}
 			}
 			response.Body.Close()
-			api.CheckSignals <- os.Interrupt
+			CheckSignals <- os.Interrupt
 		})
 	}
 }

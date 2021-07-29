@@ -3,26 +3,22 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/dkucheru/Calendar/service"
 	"github.com/gorilla/mux"
 )
 
-var CheckSignals chan os.Signal
-
 type Rest struct {
 	address  string
 	mux      *mux.Router
 	listener net.Listener
 	service  *service.Service
+	server   *http.Server
 }
 
 func New(address string, service *service.Service) *Rest {
@@ -68,28 +64,18 @@ func (rest *Rest) Listen() (err error) {
 
 	r := http.NewServeMux()
 	r.Handle("/", rest.mux)
-	server := &http.Server{
+	rest.server = &http.Server{
 		Handler: r,
 	}
 
 	rest.setupMiddleware()
-	go func() {
-		server.Serve(rest.listener)
-	}()
-	defer Stop(server)
-	log.Printf("Started server on %s", rest.address)
-	CheckSignals = make(chan os.Signal, 1)
-	signal.Notify(CheckSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	log.Println(fmt.Sprint(<-CheckSignals))
-	log.Println("Stopping API server.")
-
-	return err
+	return rest.server.Serve(rest.listener)
 }
 
-func Stop(server *http.Server) {
+func (rest *Rest) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
+	if err := rest.server.Shutdown(ctx); err != nil {
 		log.Printf("Could not shut down server correctly: %v\n", err)
 		os.Exit(1)
 	}

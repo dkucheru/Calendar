@@ -12,7 +12,8 @@ import (
 )
 
 func TestAddToDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -149,7 +150,8 @@ func TestAddToDB(t *testing.T) {
 }
 
 func TestUpdateEventInDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -291,7 +293,8 @@ func TestUpdateEventInDB(t *testing.T) {
 }
 
 func TestGetEventFromDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -400,7 +403,8 @@ func TestGetEventFromDB(t *testing.T) {
 }
 
 func TestDeleteEventFromDB(t *testing.T) {
-	repo, err := db.Initialize(os.Getenv("DSN"))
+	downMigrate := false
+	repo, err := db.Initialize(os.Getenv("DSN"), downMigrate)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

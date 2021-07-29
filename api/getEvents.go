@@ -47,22 +47,16 @@ func (rest *Rest) allEvents(w http.ResponseWriter, r *http.Request) {
 		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if len(events) > 0 {
-		eventsJSON, err := json.Marshal(events)
-		if err != nil {
-			rest.sendError(w, http.StatusInternalServerError, err)
-			return
-		}
-		_, err = w.Write(eventsJSON)
-		if err != nil {
-			rest.sendError(w, http.StatusInternalServerError, err)
-			return
-		}
-	} else {
-		w.Write([]byte("No events found"))
+	eventsJSON, err := json.Marshal(events)
+	if err != nil {
+		rest.sendError(w, http.StatusInternalServerError, err)
 		return
 	}
-
+	_, err = w.Write(eventsJSON)
+	if err != nil {
+		rest.sendError(w, http.StatusInternalServerError, err)
+		return
+	}
 }
 
 func LoadParameters(query url.Values) (structs.EventParams, error) {
