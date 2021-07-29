@@ -64,6 +64,46 @@ type EventCreation struct {
 	Alert       time.Time `json:"alert"`
 }
 
+func SuitsParams(p EventParams, e Event) bool {
+	if p.Day != 0 {
+		if e.Start.Day() != p.Day {
+			return false
+		}
+	}
+	if p.Week != 0 {
+		_, week := e.Start.ISOWeek()
+		if week != p.Week {
+			return false
+		}
+	}
+	if p.Month != 0 {
+		if int(e.Start.Month()) != p.Month {
+			return false
+		}
+	}
+	if p.Year != 0 {
+		if e.Start.Year() != p.Year {
+			return false
+		}
+	}
+	if p.Name != "" {
+		if e.Name != p.Name {
+			return false
+		}
+	}
+	if p.Start != (time.Time{}) {
+		if e.Start != p.Start {
+			return false
+		}
+	}
+	if p.End != (time.Time{}) {
+		if e.End != p.End {
+			return false
+		}
+	}
+	return true
+}
+
 func CreateEvent(loc time.Location, newEvent EventCreation) (Event, error) {
 	validate := validator.New()
 	err := validate.Struct(newEvent)
@@ -79,12 +119,12 @@ func CreateEvent(loc time.Location, newEvent EventCreation) (Event, error) {
 	a := newEvent.Alert
 
 	t := time.Date(st.Year(), st.Month(), st.Day(), st.Hour(), st.Minute(), st.Second(), st.Nanosecond(), &loc)
-	newEvent.Start = t.UTC()
+	newEvent.Start = t.In(time.UTC)
 	t = time.Date(end.Year(), end.Month(), end.Day(), end.Hour(), end.Minute(), end.Second(), end.Nanosecond(), &loc)
-	newEvent.End = t.UTC()
+	newEvent.End = t.In(time.UTC)
 	if newEvent.Alert != (time.Time{}) {
 		t = time.Date(a.Year(), a.Month(), a.Day(), a.Hour(), a.Minute(), a.Second(), a.Nanosecond(), &loc)
-		newEvent.Alert = t.UTC()
+		newEvent.Alert = t.In(time.UTC)
 	}
 
 	return Event{
@@ -105,6 +145,17 @@ type EventParams struct {
 	Start   time.Time
 	End     time.Time
 	Sorting bool
+}
+
+type URLParams struct {
+	Day     string
+	Week    string
+	Month   string
+	Year    string
+	Name    string
+	Start   string
+	End     string
+	Sorting string
 }
 
 var GlobalId int

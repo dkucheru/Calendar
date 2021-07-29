@@ -1,10 +1,13 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/dkucheru/Calendar/service"
 	"github.com/gorilla/mux"
@@ -15,6 +18,7 @@ type Rest struct {
 	mux      *mux.Router
 	listener net.Listener
 	service  *service.Service
+	server   *http.Server
 }
 
 func New(address string, service *service.Service) *Rest {
@@ -45,6 +49,7 @@ func (rest *Rest) BasicAuthMiddleware(handler http.HandlerFunc) http.HandlerFunc
 			w.Header().Set("WWW-Authenticate", `Basic realm="Please enter your username and password for this site"`)
 			w.WriteHeader(401)
 			w.Write([]byte("Unauthorised.\n"))
+			log.Println(err.Error())
 			return
 		}
 		handler(w, r)
@@ -59,13 +64,21 @@ func (rest *Rest) Listen() (err error) {
 
 	r := http.NewServeMux()
 	r.Handle("/", rest.mux)
-	server := &http.Server{
+	rest.server = &http.Server{
 		Handler: r,
 	}
 
 	rest.setupMiddleware()
+	return rest.server.Serve(rest.listener)
+}
 
-	return server.Serve(rest.listener)
+func (rest *Rest) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := rest.server.Shutdown(ctx); err != nil {
+		log.Printf("Could not shut down server correctly: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func (rest *Rest) setupMiddleware() {

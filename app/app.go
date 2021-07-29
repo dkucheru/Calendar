@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+
 	"github.com/dkucheru/Calendar/api"
 	"github.com/dkucheru/Calendar/db"
 	"github.com/dkucheru/Calendar/service"
@@ -13,16 +15,20 @@ type App struct {
 	Api        *api.Rest
 }
 
-func New() (*App, error) {
+func New(downMigrateFlag bool) (*App, error) {
 	var err error
 	app := &App{}
 
-	app.EventsRepo, err = db.NewArrayRepository()
+	database, err := db.Initialize(os.Getenv("DSN"), downMigrateFlag)
+	if err != nil {
+		return nil, err
+	}
+	app.EventsRepo, err = db.NewDatabaseRepository(database)
 	if err != nil {
 		return nil, err
 	}
 
-	app.UsersRepo, err = db.NewUsersRepository()
+	app.UsersRepo, err = db.NewUsersDBRepository(database)
 	if err != nil {
 		return nil, err
 	}
@@ -35,4 +41,8 @@ func New() (*App, error) {
 
 func (a *App) Run() error {
 	return a.Api.Listen()
+}
+
+func (a *App) Stop() {
+	a.Api.Stop()
 }
